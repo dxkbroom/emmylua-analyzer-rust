@@ -575,6 +575,279 @@ mod tests {
         Ok(())
     }
 
+    #[gtest]
+    fn test_hover_decl_falls_back_to_type_description() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new();
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                run(function (<??>scope) end)
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(parameter) scope: Scope\n```\n\n---\n\nScope docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                local <??>s = make()
+            "#,
+            VirtualHoverResult {
+                value: "```lua\nlocal s: Scope\n```\n\n---\n\nScope docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@type Scope
+                local <??>t
+            "#,
+            VirtualHoverResult {
+                value: "```lua\nlocal t: Scope\n```\n\n---\n\nScope docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@param p Scope
+                local function f(<??>p) end
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(parameter) p: Scope\n```\n\n---\n\nScope docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                --- Own docs.
+                ---@type Scope
+                local <??>o
+            "#,
+            VirtualHoverResult {
+                value: "```lua\nlocal o: Scope\n```\n\n---\n\nOwn docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@type Scope|string
+                local <??>u
+            "#,
+            VirtualHoverResult {
+                value: "```lua\nlocal u: (Scope|string)\n```".to_string(),
+            },
+        ));
+        Ok(())
+    }
+
+    #[gtest]
+    fn test_hover_member_falls_back_to_type_description() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new();
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@class Holder
+                ---@field s Scope
+                ---@field own Scope Own field docs.
+                ---@field u Scope|string
+                ---@field go fun(self: Holder): Scope
+                local Holder = {}
+
+                local M = {}
+                M.inst = make()
+
+                ---@type Holder
+                local h
+                print(h.<??>s)
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(field) s: Scope\n```\n\n---\n\nScope docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@class Holder
+                ---@field s Scope
+                ---@field own Scope Own field docs.
+                ---@field u Scope|string
+                ---@field go fun(self: Holder): Scope
+                local Holder = {}
+
+                local M = {}
+                M.inst = make()
+
+                print(M.<??>inst)
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(field) inst: Scope\n```\n\n---\n\nScope docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@class Holder
+                ---@field s Scope
+                ---@field own Scope Own field docs.
+                ---@field u Scope|string
+                ---@field go fun(self: Holder): Scope
+                local Holder = {}
+
+                local M = {}
+                M.inst = make()
+
+                ---@type Holder
+                local h
+                print(h.<??>own)
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(field) own: Scope\n```\n\n---\n\nOwn field docs.".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@class Holder
+                ---@field s Scope
+                ---@field own Scope Own field docs.
+                ---@field u Scope|string
+                ---@field go fun(self: Holder): Scope
+                local Holder = {}
+
+                local M = {}
+                M.inst = make()
+
+                ---@type Holder
+                local h
+                print(h.<??>u)
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(field) u: (Scope|string)\n```".to_string(),
+            },
+        ));
+        check!(ws.check_hover(
+            r#"
+                --- Scope docs.
+                ---@class Scope
+                local Scope = {}
+
+                ---@param body fun(scope: Scope)
+                local function run(body) end
+
+                ---@return Scope
+                local function make() end
+
+                ---@class Holder
+                ---@field s Scope
+                ---@field own Scope Own field docs.
+                ---@field u Scope|string
+                ---@field go fun(self: Holder): Scope
+                local Holder = {}
+
+                local M = {}
+                M.inst = make()
+
+                ---@type Holder
+                local h
+                h:<??>go()
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(method) Holder:go() -> Scope\n```".to_string(),
+            },
+        ));
+        Ok(())
+    }
+
     // M3 batch 2 retirement: depends on the old humanize rendering stack (constant value / alias / keyof / overloaded attributes / narrowing / cross-file declared type projection, etc.); see migration notes §M3.
     #[gtest]
     fn test_hover_class_bound_member_description() -> Result<()> {

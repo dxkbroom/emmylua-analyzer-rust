@@ -975,6 +975,52 @@ fn build_decl_hover(
     call_fun: Option<&LuaFunctionType>,
     call_bindings: Option<&HashMap<GenericTplId, LuaType>>,
 ) -> (String, Option<HoverDescription>) {
+    let (code, description) = build_decl_hover_parts(model, typ, decl, call_fun, call_bindings);
+    let description = with_type_description(model, description, typ, || model.type_of_decl(decl));
+    (code, description)
+}
+
+/// Variables and fields without their own doc comment fall back to the description of the
+/// named type they hold (`local job = launch()`, a callback parameter, `---@type T`,
+/// `---@field f T`), as hover on the type name itself shows it. Own docs win; functions,
+/// unions and other unnamed types are left alone.
+fn with_type_description(
+    model: &SemanticModel<'_>,
+    description: Option<HoverDescription>,
+    typ: &LuaType,
+    declared: impl FnOnce() -> Option<LuaType>,
+) -> Option<HoverDescription> {
+    let mut description = description?;
+    if description.text.is_none() {
+        let typ = if matches!(typ, LuaType::Unknown) {
+            declared().unwrap_or(LuaType::Unknown)
+        } else {
+            typ.clone()
+        };
+        description.text = named_type_description(model, &typ);
+    }
+    Some(description)
+}
+
+/// Description of the single named type (class / alias / enum) a value type resolves to:
+/// `T`, `T?` or `T<...>`.
+fn named_type_description(model: &SemanticModel<'_>, typ: &LuaType) -> Option<String> {
+    let id = match strip_nullable(typ) {
+        LuaType::Ref(id) | LuaType::Def(id) => id,
+        LuaType::Generic(generic) => generic.get_base_type_id_ref().clone(),
+        _ => return None,
+    };
+    let def = model.type_def_of(&id)?;
+    type_def_description(model, &def).text
+}
+
+fn build_decl_hover_parts(
+    model: &SemanticModel<'_>,
+    typ: &LuaType,
+    decl: &SemanticId,
+    call_fun: Option<&LuaFunctionType>,
+    call_bindings: Option<&HashMap<GenericTplId, LuaType>>,
+) -> (String, Option<HoverDescription>) {
     let Some(decls) = model.decls() else {
         return (humanize(model, typ), None);
     };
@@ -1491,6 +1537,20 @@ fn runtime_non_nil_value_type(
 }
 
 fn build_member_hover(
+    model: &SemanticModel<'_>,
+    typ: &LuaType,
+    member: &SemanticId,
+    call_site_substituted: bool,
+    context_infos: &[MemberContextInfo],
+) -> (String, Option<HoverDescription>) {
+    let (code, description) =
+        build_member_hover_parts(model, typ, member, call_site_substituted, context_infos);
+    let description =
+        with_type_description(model, description, typ, || model.type_of_member(member));
+    (code, description)
+}
+
+fn build_member_hover_parts(
     model: &SemanticModel<'_>,
     typ: &LuaType,
     member: &SemanticId,
