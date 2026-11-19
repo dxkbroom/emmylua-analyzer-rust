@@ -142,6 +142,10 @@
         "typeCall": false
       }
     },
+    "test": {
+      "$ref": "#/$defs/EmmyrcTest",
+      "default": {}
+    },
     "workspace": {
       "$ref": "#/$defs/EmmyrcWorkspace",
       "default": {
@@ -456,6 +460,16 @@
           "description": "missing-type-argument",
           "type": "string",
           "const": "missing-type-argument"
+        },
+        {
+          "description": "busted spec file, but no test framework is configured or detected",
+          "type": "string",
+          "const": "busted-not-configured"
+        },
+        {
+          "description": "busted enabled automatically from a `.busted` file",
+          "type": "string",
+          "const": "busted-auto-detected"
         }
       ]
     },
@@ -1094,6 +1108,41 @@
           "default": false
         }
       }
+    },
+    "EmmyrcTest": {
+      "type": "object",
+      "properties": {
+        "framework": {
+          "description": "Test framework whose built-in definitions are loaded.\n\n- `busted`: busted globals (`describe`, `it`, ...) plus luassert (`assert`, `spy`, `mock`, ...).\n- `luassert`: only luassert (`require(\"luassert\")`, the extended `assert`).\n- `none`: load nothing and turn off auto-detection.\n\nWhen unset, busted is enabled automatically if a `.busted` file exists in a workspace root.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmmyrcTestFramework"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "EmmyrcTestFramework": {
+      "oneOf": [
+        {
+          "description": "Do not load any test framework definitions and disable auto-detection.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "busted, including luassert.",
+          "type": "string",
+          "const": "busted"
+        },
+        {
+          "description": "luassert only.",
+          "type": "string",
+          "const": "luassert"
+        }
+      ]
     },
     "EmmyrcWorkspace": {
       "type": "object",

@@ -11,6 +11,10 @@ extend-ignore-re = [
 [default.extend-identifiers]
 typ = "typ"
 
+[default.extend-words]
+# busted's output handler API (resources/addons/busted)
+pendings = "pendings"
+
 [files]
 extend-exclude = [
   "CHANGELOG.md",

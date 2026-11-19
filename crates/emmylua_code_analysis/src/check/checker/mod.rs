@@ -6,6 +6,7 @@ pub mod analyze_error;
 pub mod assign_type_mismatch;
 pub mod attribute_check;
 pub mod await_in_sync;
+pub mod busted_config;
 pub mod call_non_callable;
 pub mod cast_type_mismatch;
 pub mod check_export;
@@ -273,6 +274,7 @@ pub fn check_file(semantic_model: &SemanticModel<'_>, config: Arc<CheckConfig>) 
     run_checked::<check_field::CheckFieldChecker>(&mut context, semantic_model);
     run_checked::<discard_returns::DiscardReturnsChecker>(&mut context, semantic_model);
     run_checked::<global_non_module::GlobalInNonModuleChecker>(&mut context, semantic_model);
+    run_checked::<busted_config::BustedConfigChecker>(&mut context, semantic_model);
     let mut ranges: Vec<_> = semantic_model
         .type_evaluation_errors()
         .into_iter()

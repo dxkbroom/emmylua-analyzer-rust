@@ -14,6 +14,7 @@ mod runtime;
 mod semantictoken;
 mod signature;
 mod strict;
+mod test;
 mod workspace;
 
 pub use code_action::EmmyrcCodeAction;
@@ -32,6 +33,7 @@ pub use runtime::{EmmyrcLuaVersion, EmmyrcRuntime};
 pub use semantictoken::EmmyrcSemanticToken;
 pub use signature::EmmyrcSignature;
 pub use strict::EmmyrcStrict;
+pub use test::{BUSTED_CONFIG_FILE, EmmyrcTest, EmmyrcTestFramework, TestFrameworkAddon};
 pub use workspace::{
     EmmyLibraryConfig, EmmyLibraryItem, EmmyrcWorkspace, EmmyrcWorkspaceModuleMap,
     EmmyrcWorkspacePathConfig, EmmyrcWorkspacePathItem,

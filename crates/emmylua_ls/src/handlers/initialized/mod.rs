@@ -115,6 +115,11 @@ pub async fn init_analysis(
     );
 
     let workspace_folders = build_workspace_folders(&workspace_folders, emmyrc.as_ref());
+    let emmyrc = {
+        let mut emmyrc = emmyrc.as_ref().clone();
+        emmyrc.detect_test_framework(&workspace_folders);
+        Arc::new(emmyrc)
+    };
 
     status_bar.update_progress_task(
         ProgressTask::LoadWorkspace,
@@ -148,6 +153,10 @@ pub async fn init_analysis(
                     analysis.add_main_workspace(workspace.root.clone());
                 }
             }
+            // Built-in test framework addons (busted/luassert) are reloaded with the workspace,
+            // so toggling `test.framework` in .emmyrc.json applies without a restart.
+            let mut files = files;
+            files.extend(analysis.add_test_framework_workspaces());
             analysis.reload_workspace_files(files, open_files)
         })
         .await;

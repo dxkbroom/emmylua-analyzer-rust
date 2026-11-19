@@ -66,6 +66,7 @@ impl VirtualWorkspace {
         let mut analysis = EmmyLuaAnalysis::new();
         analysis.update_config(Arc::new(emmyrc));
         analysis.init_std_lib(None);
+        analysis.load_test_framework_addons();
         let base = &generator.base;
         analysis.add_main_workspace(base.clone());
         VirtualWorkspace {

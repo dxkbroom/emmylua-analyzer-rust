@@ -125,6 +125,10 @@ pub enum DiagnosticCode {
     InconsistentTypeAccessModifier,
     /// missing-type-argument
     MissingTypeArgument,
+    /// busted spec file, but no test framework is configured or detected
+    BustedNotConfigured,
+    /// busted enabled automatically from a `.busted` file
+    BustedAutoDetected,
     #[serde(other)]
     None,
 }
@@ -154,6 +158,8 @@ pub fn get_default_severity(code: DiagnosticCode) -> DiagnosticSeverity {
         DiagnosticCode::IterVariableReassign => DiagnosticSeverity::ERROR,
         DiagnosticCode::PreferredLocalAlias => DiagnosticSeverity::HINT,
         DiagnosticCode::CallNonCallable => DiagnosticSeverity::WARNING,
+        DiagnosticCode::BustedNotConfigured => DiagnosticSeverity::WARNING,
+        DiagnosticCode::BustedAutoDetected => DiagnosticSeverity::INFORMATION,
         _ => DiagnosticSeverity::WARNING,
     }
 }

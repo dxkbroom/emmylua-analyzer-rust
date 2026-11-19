@@ -8,12 +8,13 @@ use std::{collections::HashMap, path::Path};
 
 pub use config_loader::{load_configs, load_configs_raw};
 pub use configs::{
-    DiagnosticSeveritySetting, DocSyntax, EmmyLibraryConfig, EmmyLibraryItem, EmmyrcCodeAction,
-    EmmyrcCodeLens, EmmyrcCompletion, EmmyrcDiagnostic, EmmyrcDoc, EmmyrcDocumentColor,
-    EmmyrcExternalTool, EmmyrcFilenameConvention, EmmyrcHover, EmmyrcInlayHint, EmmyrcInlineValues,
-    EmmyrcLuaVersion, EmmyrcReference, EmmyrcReformat, EmmyrcResource, EmmyrcRuntime,
-    EmmyrcSemanticToken, EmmyrcSignature, EmmyrcStrict, EmmyrcWorkspace, EmmyrcWorkspaceModuleMap,
-    EmmyrcWorkspacePathConfig, EmmyrcWorkspacePathItem,
+    BUSTED_CONFIG_FILE, DiagnosticSeveritySetting, DocSyntax, EmmyLibraryConfig, EmmyLibraryItem,
+    EmmyrcCodeAction, EmmyrcCodeLens, EmmyrcCompletion, EmmyrcDiagnostic, EmmyrcDoc,
+    EmmyrcDocumentColor, EmmyrcExternalTool, EmmyrcFilenameConvention, EmmyrcHover,
+    EmmyrcInlayHint, EmmyrcInlineValues, EmmyrcLuaVersion, EmmyrcReference, EmmyrcReformat,
+    EmmyrcResource, EmmyrcRuntime, EmmyrcSemanticToken, EmmyrcSignature, EmmyrcStrict, EmmyrcTest,
+    EmmyrcTestFramework, EmmyrcWorkspace, EmmyrcWorkspaceModuleMap, EmmyrcWorkspacePathConfig,
+    EmmyrcWorkspacePathItem, TestFrameworkAddon,
 };
 use emmylua_parser::{LuaFeaturesSet, LuaLanguageLevel, ParserConfig, SpecialFunction};
 use rowan::NodeCache;
@@ -63,6 +64,8 @@ pub struct Emmyrc {
     pub doc: EmmyrcDoc,
     #[serde(default)]
     pub format: EmmyrcReformat,
+    #[serde(default)]
+    pub test: EmmyrcTest,
 }
 
 impl Emmyrc {
@@ -142,6 +145,17 @@ impl Emmyrc {
             .iter()
             .map(|tag| SmolStr::new(tag.as_str()))
             .collect()
+    }
+
+    /// Auto-detect the test framework (e.g. a `.busted` file) from the main workspace roots.
+    /// Library folders are ignored. No-op when `test.framework` is configured.
+    pub fn detect_test_framework(&mut self, workspace_folders: &[crate::WorkspaceFolder]) {
+        self.test.detect_framework(
+            workspace_folders
+                .iter()
+                .filter(|folder| !folder.is_library)
+                .map(|folder| folder.root.as_path()),
+        );
     }
 
     pub fn pre_process_emmyrc(&mut self, workspace_root: &Path) {

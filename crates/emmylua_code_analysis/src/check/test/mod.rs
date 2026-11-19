@@ -6,6 +6,7 @@ mod assign_type_mismatch_test;
 mod attribute_check_test;
 mod await_in_sync_test;
 mod boolean_compatibility_test;
+mod busted_config_test;
 mod call_non_callable_test;
 mod cast_type_mismatch_test;
 mod check_export_test;

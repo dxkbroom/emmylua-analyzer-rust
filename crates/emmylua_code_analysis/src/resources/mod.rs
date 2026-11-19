@@ -5,10 +5,12 @@ use std::path::{Path, PathBuf};
 pub use best_resource_path::get_best_resources_dir;
 use include_dir::{Dir, DirEntry, include_dir};
 
-use crate::{LuaFileInfo, get_locale_code, load_workspace_files};
+use crate::{LuaFileInfo, TestFrameworkAddon, get_locale_code, load_workspace_files};
 
 static RESOURCE_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/resources");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Opt-in definition bundles (e.g. busted, luassert); never loaded as part of std.
+const ADDONS_DIR: &str = "addons";
 
 pub fn load_resource_std(
     create_resources_dir: Option<String>,
@@ -38,7 +40,7 @@ pub fn load_resource_std(
     let mut files = files
         .into_iter()
         .filter_map(|file| {
-            if file.path.ends_with(".lua") {
+            if file.path.ends_with(".lua") && !is_addon_resource(&file.path) {
                 let path = resoucres_dir
                     .join(&file.path)
                     .to_str()
@@ -57,6 +59,39 @@ pub fn load_resource_std(
         remove_jit_resource(&mut files);
     }
     (std_dir, files)
+}
+
+fn is_addon_resource(path: &str) -> bool {
+    Path::new(path).starts_with(ADDONS_DIR)
+}
+
+/// Load one built-in addon bundle (`resources/addons/<name>`).
+///
+/// Returns the addon root (under `resources_root`, so it matches the files the LSP dumps to
+/// disk) and its `.lua` files. Contents always come from the bundled copy.
+pub fn load_resource_addon(
+    resources_root: &Path,
+    addon: TestFrameworkAddon,
+) -> (PathBuf, Vec<LuaFileInfo>) {
+    let relative = Path::new(ADDONS_DIR).join(addon.dir_name());
+    let root = resources_root.join(&relative);
+    let mut files = Vec::new();
+    if let Some(dir) = RESOURCE_DIR.get_dir(&relative) {
+        walk_resource_dir(dir, &mut files);
+    }
+    let files = files
+        .into_iter()
+        .filter(|file| file.path.ends_with(".lua"))
+        .map(|file| LuaFileInfo {
+            path: resources_root
+                .join(&file.path)
+                .to_str()
+                .expect("UTF-8 paths")
+                .to_string(),
+            content: file.content,
+        })
+        .collect();
+    (root, files)
 }
 
 fn remove_jit_resource(files: &mut Vec<LuaFileInfo>) {
@@ -79,7 +114,7 @@ fn remove_jit_resource(files: &mut Vec<LuaFileInfo>) {
 }
 
 fn load_resource_from_file_system(resources_dir: &Path) -> Option<Vec<LuaFileInfo>> {
-    if check_need_dump_to_file_system() {
+    if check_need_dump_to_file_system(resources_dir) {
         log::info!("Creating resources dir: {:?}", resources_dir);
         let files = load_resource_from_include_dir();
         for file in &files {
@@ -129,13 +164,17 @@ fn load_resource_from_file_system(resources_dir: &Path) -> Option<Vec<LuaFileInf
     Some(files)
 }
 
-fn check_need_dump_to_file_system() -> bool {
+fn check_need_dump_to_file_system(resources_dir: &Path) -> bool {
     if cfg!(debug_assertions) {
         return true;
     }
 
-    let resoucres_dir = get_best_resources_dir();
-    let version_path = resoucres_dir.join("version");
+    // A dump from a build without addons can carry the same version string.
+    if !resources_dir.join(ADDONS_DIR).exists() {
+        return true;
+    }
+
+    let version_path = resources_dir.join("version");
 
     if !version_path.exists() {
         return true;

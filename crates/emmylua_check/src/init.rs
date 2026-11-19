@@ -101,11 +101,13 @@ pub async fn load_workspace(
         .iter()
         .map(|path| WorkspaceFolder::new(path.clone(), false))
         .collect::<Vec<WorkspaceFolder>>();
+    let workspace_folders = build_workspace_folders(&workspace_folders, &emmyrc);
+    emmyrc.detect_test_framework(&workspace_folders);
+
     let mut analysis = EmmyLuaAnalysis::new();
     analysis.update_config(emmyrc.clone().into());
     analysis.init_std_lib(None);
 
-    let workspace_folders = build_workspace_folders(&workspace_folders, &emmyrc);
     for workspace in &workspace_folders {
         if workspace.is_library {
             analysis.add_library_workspace(workspace);
@@ -115,10 +117,11 @@ pub async fn load_workspace(
     }
 
     let file_infos = collect_workspace_files(&workspace_folders, &analysis.emmyrc, None, ignore);
-    let files = file_infos
+    let mut files: Vec<_> = file_infos
         .into_iter()
         .map(|file| file.into_tuple())
         .collect();
+    files.extend(analysis.add_test_framework_workspaces());
     analysis.update_files_by_path(files);
     Some(analysis)
 }

@@ -311,3 +311,7 @@ Cannot use `...` outside a vararg function.:
   en: "the string template type `%{name}` does not match any type declaration"
   zh_CN: "字符串模板类型 `%{name}` 与任何类型声明不匹配"
   zh_HK: "字串模板類型 `%{name}` 與任何類型聲明不匹配"
+"Built-in busted support was enabled automatically because a .busted file was found. Set `test.framework` to `busted` in .emmyrc.json to make this explicit.":
+  en: "Built-in busted support was enabled automatically because a .busted file was found. Set `test.framework` to `busted` in .emmyrc.json to make this explicit."
+"This looks like a busted spec ('%{name}' is a busted function), but busted support is not enabled. Set `test.framework` to `busted` in .emmyrc.json, or add a .busted file to the project root, to load the built-in busted and luassert definitions.":
+  en: "This looks like a busted spec ('%{name}' is a busted function), but busted support is not enabled. Set `test.framework` to `busted` in .emmyrc.json, or add a .busted file to the project root, to load the built-in busted and luassert definitions."

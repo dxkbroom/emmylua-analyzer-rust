@@ -38,7 +38,7 @@ pub use locale::get_locale_code;
 use lsp_types::Uri;
 pub use resources::get_best_resources_dir;
 pub use resources::load_resource_from_include_dir;
-use resources::load_resource_std;
+use resources::{load_resource_addon, load_resource_std};
 pub use semantic_db::*;
 /// Semantic model entry point.
 pub use semantic_model::SemanticModel;
@@ -72,6 +72,8 @@ pub struct EmmyLuaAnalysis {
     pub db: SemanticDatabase,
     pub diagnostic: LuaDiagnostic,
     pub emmyrc: Arc<Emmyrc>,
+    /// Root of the bundled resources (parent of the std dir) once `init_std_lib` ran.
+    resources_root: Option<PathBuf>,
 }
 
 impl EmmyLuaAnalysis {
@@ -83,12 +85,14 @@ impl EmmyLuaAnalysis {
             db,
             diagnostic: LuaDiagnostic::new(),
             emmyrc,
+            resources_root: None,
         }
     }
 
     pub fn init_std_lib(&mut self, create_resources_dir: Option<String>) {
         let is_jit = self.emmyrc.runtime.version.is_luajit();
         let (std_root, files) = load_resource_std(create_resources_dir, is_jit);
+        self.resources_root = std_root.parent().map(|root| root.to_path_buf());
         self.db.add_std_workspace(std_root);
 
         let files = files
@@ -107,6 +111,44 @@ impl EmmyLuaAnalysis {
             .collect::<Vec<_>>();
         self.db.add_protected_paths(protected);
         self.update_files_by_path(files);
+    }
+
+    /// Register a library workspace for each built-in addon of the effective test framework
+    /// (`emmyrc.test`, including auto-detection) and return the addon files to load.
+    ///
+    /// Addons live in library workspaces rather than std so a workspace reload drops them
+    /// again when the framework is turned off: `clear_non_std_workspaces` removes the roots
+    /// and `reload_workspace_files` removes files that are no longer listed.
+    pub fn add_test_framework_workspaces(&mut self) -> Vec<(PathBuf, Option<String>)> {
+        let Some(framework) = self.emmyrc.test.effective_framework() else {
+            return Vec::new();
+        };
+        let resources_root = self
+            .resources_root
+            .clone()
+            .unwrap_or_else(get_best_resources_dir);
+        let mut result = Vec::new();
+        for addon in framework.addons() {
+            let (root, files) = load_resource_addon(&resources_root, *addon);
+            log::info!("add {} addon workspace: {:?}", addon.dir_name(), root);
+            self.db
+                .add_library_workspace(&WorkspaceFolder::new(root, true));
+            result.extend(
+                files
+                    .into_iter()
+                    .map(|file| (PathBuf::from(file.path), Some(file.content))),
+            );
+        }
+        result
+    }
+
+    /// Load the built-in addons of the effective test framework (see
+    /// [`Self::add_test_framework_workspaces`]).
+    pub fn load_test_framework_addons(&mut self) {
+        let files = self.add_test_framework_workspaces();
+        if !files.is_empty() {
+            self.update_files_by_path(files);
+        }
     }
 
     pub fn get_file_id(&self, uri: &Uri) -> Option<FileId> {
