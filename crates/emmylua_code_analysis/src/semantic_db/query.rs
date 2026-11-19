@@ -941,6 +941,19 @@ pub(crate) fn global_decl_by_name(db: &SemanticDatabase, name: SmolStr) -> Optio
     for root in roots.iter() {
         let decls = workspace_decl_index_for(db, root.id).global_decls_named(&name);
         if let Some(decl) = first_version_visible_decl(db, decls) {
+            // A library may redefine a std global on purpose (e.g. luassert's `assert`).
+            // std registers first, so prefer a library declaration over the builtin.
+            if root.id.is_std()
+                && let Some(library_decl) = roots
+                    .iter()
+                    .filter(|root| root.id.is_library())
+                    .find_map(|root| {
+                        let decls = workspace_decl_index_for(db, root.id).global_decls_named(&name);
+                        first_version_visible_decl(db, decls)
+                    })
+            {
+                return Some(library_decl);
+            }
             return Some(decl);
         }
     }

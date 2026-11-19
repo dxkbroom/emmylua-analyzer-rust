@@ -299,4 +299,19 @@ mod tests {
         let emmyrc: Emmyrc = serde_json::from_str("{}").expect("parse");
         assert_eq!(emmyrc.test.framework, None);
     }
+
+    #[test]
+    fn busted_assert_global_overrides_std_assert() {
+        // std registers before the addon library; the library `assert` must still win.
+        let mut ws = workspace(Some(EmmyrcTestFramework::Busted));
+        let ty = ws.expr_ty("assert");
+        assert_eq!(ws.humanize_type(ty), "luassert");
+        let ty = ws.expr_ty("assert.is_false");
+        let humanized = ws.humanize_type(ty);
+        assert!(humanized.starts_with("fun(value: any"), "{humanized}");
+
+        let mut ws = workspace(None);
+        let ty = ws.expr_ty("assert");
+        assert!(ws.humanize_type(ty).contains("fun"), "std assert expected");
+    }
 }

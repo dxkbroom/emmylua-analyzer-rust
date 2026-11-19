@@ -1,29 +1,9 @@
 ---@meta luassert
 
--- Generated from lunarmodules/luassert master (v1.8.0) by `mise run render:emmy-luassert`. Do not edit by hand.
+-- Generated from lunarmodules/luassert master (v1.8.0) by `mise run render:emmy-luassert`.
+-- Assertion signatures are inlined into each field (no aliases) so hover shows them.
 -- Lua keywords (true/false/nil/function/not) can't follow a dot, so they're typed
 -- capitalized (assert.True, assert.is.Not). luassert lowercases tokens, so that works at runtime.
-
--- Assertion signatures ----------------------------------------------------
-
----@alias luassert.fn.is_true fun(value: any, message?: string): any
----@alias luassert.fn.is_false fun(value: any, message?: string): any
----@alias luassert.fn.type fun(value: any, message?: string): any
----@alias luassert.fn.returned_arguments fun(count: integer, ...: any): any
----@alias luassert.fn.same fun(expected: any, actual: any, message?: string): any
----@alias luassert.fn.matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
----@alias luassert.fn.near fun(expected: number, actual: number, tolerance: number, message?: string): any
----@alias luassert.fn.equals fun(expected: any, actual: any, message?: string): any
----@alias luassert.fn.unique fun(list: table, deep?: boolean, message?: string): any
----@alias luassert.fn.error fun(fn: function, expected_err?: any, message?: string): any
----@alias luassert.fn.error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
----@alias luassert.fn.truthy fun(value: any, message?: string): any
----@alias luassert.fn.falsy fun(value: any, message?: string): any
----@alias luassert.fn.returned_with fun(...: any)
----@alias luassert.fn.called_with fun(...: any)
----@alias luassert.fn.called fun(times?: integer)
----@alias luassert.fn.called_n fun(times: integer)
----@alias luassert.fn.holes fun(length?: integer): integer?
 
 -- Matcher ------------------------------------------------------------------
 
@@ -59,452 +39,452 @@
 -- Assertions (bare names) --------------------------------------------------
 
 ---@class luassert.assertions
----@field True luassert.fn.is_true
----@field False luassert.fn.is_false
----@field boolean luassert.fn.type
----@field number luassert.fn.type
----@field string luassert.fn.type
----@field table luassert.fn.type
----@field Nil luassert.fn.type
----@field userdata luassert.fn.type
----@field Function luassert.fn.type
----@field thread luassert.fn.type
----@field returned_arguments luassert.fn.returned_arguments
----@field same luassert.fn.same
----@field matches luassert.fn.matches
----@field match luassert.fn.matches
----@field near luassert.fn.near
----@field equals luassert.fn.equals
----@field equal luassert.fn.equals
----@field unique luassert.fn.unique
----@field error luassert.fn.error
----@field errors luassert.fn.error
----@field error_matches luassert.fn.error_matches
----@field error_match luassert.fn.error_matches
----@field matches_error luassert.fn.error_matches
----@field match_error luassert.fn.error_matches
----@field truthy luassert.fn.truthy
----@field falsy luassert.fn.falsy
----@field returned_with luassert.fn.returned_with
----@field called_with luassert.fn.called_with
----@field called luassert.fn.called
----@field called_at_least luassert.fn.called_n
----@field called_at_most luassert.fn.called_n
----@field called_more_than luassert.fn.called_n
----@field called_less_than luassert.fn.called_n
----@field holes luassert.fn.holes
+---@field True fun(value: any, message?: string): any
+---@field False fun(value: any, message?: string): any
+---@field boolean fun(value: any, message?: string): any
+---@field number fun(value: any, message?: string): any
+---@field string fun(value: any, message?: string): any
+---@field table fun(value: any, message?: string): any
+---@field Nil fun(value: any, message?: string): any
+---@field userdata fun(value: any, message?: string): any
+---@field Function fun(value: any, message?: string): any
+---@field thread fun(value: any, message?: string): any
+---@field returned_arguments fun(count: integer, ...: any): any
+---@field same fun(expected: any, actual: any, message?: string): any
+---@field matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field equals fun(expected: any, actual: any, message?: string): any
+---@field equal fun(expected: any, actual: any, message?: string): any
+---@field unique fun(list: table, deep?: boolean, message?: string): any
+---@field error fun(fn: function, expected_err?: any, message?: string): any
+---@field errors fun(fn: function, expected_err?: any, message?: string): any
+---@field error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field truthy fun(value: any, message?: string): any
+---@field falsy fun(value: any, message?: string): any
+---@field returned_with fun(...: any)
+---@field called_with fun(...: any)
+---@field called fun(times?: integer)
+---@field called_at_least fun(times: integer)
+---@field called_at_most fun(times: integer)
+---@field called_more_than fun(times: integer)
+---@field called_less_than fun(times: integer)
+---@field holes fun(length?: integer): integer?
 
 -- Compound underscore forms: assert.is_not_nil, assert.has_no_errors, ... ---
 
 ---@class luassert.compound
----@field not_true luassert.fn.is_true
----@field not_false luassert.fn.is_false
----@field not_boolean luassert.fn.type
----@field not_number luassert.fn.type
----@field not_string luassert.fn.type
----@field not_table luassert.fn.type
----@field not_nil luassert.fn.type
----@field not_userdata luassert.fn.type
----@field not_function luassert.fn.type
----@field not_thread luassert.fn.type
----@field not_returned_arguments luassert.fn.returned_arguments
----@field not_same luassert.fn.same
----@field not_matches luassert.fn.matches
----@field not_match luassert.fn.matches
----@field not_near luassert.fn.near
----@field not_equals luassert.fn.equals
----@field not_equal luassert.fn.equals
----@field not_unique luassert.fn.unique
----@field not_error luassert.fn.error
----@field not_errors luassert.fn.error
----@field not_error_matches luassert.fn.error_matches
----@field not_error_match luassert.fn.error_matches
----@field not_matches_error luassert.fn.error_matches
----@field not_match_error luassert.fn.error_matches
----@field not_truthy luassert.fn.truthy
----@field not_falsy luassert.fn.falsy
----@field not_returned_with luassert.fn.returned_with
----@field not_called_with luassert.fn.called_with
----@field not_called luassert.fn.called
----@field not_called_at_least luassert.fn.called_n
----@field not_called_at_most luassert.fn.called_n
----@field not_called_more_than luassert.fn.called_n
----@field not_called_less_than luassert.fn.called_n
----@field not_holes luassert.fn.holes
----@field no_true luassert.fn.is_true
----@field no_false luassert.fn.is_false
----@field no_boolean luassert.fn.type
----@field no_number luassert.fn.type
----@field no_string luassert.fn.type
----@field no_table luassert.fn.type
----@field no_nil luassert.fn.type
----@field no_userdata luassert.fn.type
----@field no_function luassert.fn.type
----@field no_thread luassert.fn.type
----@field no_returned_arguments luassert.fn.returned_arguments
----@field no_same luassert.fn.same
----@field no_matches luassert.fn.matches
----@field no_match luassert.fn.matches
----@field no_near luassert.fn.near
----@field no_equals luassert.fn.equals
----@field no_equal luassert.fn.equals
----@field no_unique luassert.fn.unique
----@field no_error luassert.fn.error
----@field no_errors luassert.fn.error
----@field no_error_matches luassert.fn.error_matches
----@field no_error_match luassert.fn.error_matches
----@field no_matches_error luassert.fn.error_matches
----@field no_match_error luassert.fn.error_matches
----@field no_truthy luassert.fn.truthy
----@field no_falsy luassert.fn.falsy
----@field no_returned_with luassert.fn.returned_with
----@field no_called_with luassert.fn.called_with
----@field no_called luassert.fn.called
----@field no_called_at_least luassert.fn.called_n
----@field no_called_at_most luassert.fn.called_n
----@field no_called_more_than luassert.fn.called_n
----@field no_called_less_than luassert.fn.called_n
----@field no_holes luassert.fn.holes
----@field is_true luassert.fn.is_true
----@field is_false luassert.fn.is_false
----@field is_boolean luassert.fn.type
----@field is_number luassert.fn.type
----@field is_string luassert.fn.type
----@field is_table luassert.fn.type
----@field is_nil luassert.fn.type
----@field is_userdata luassert.fn.type
----@field is_function luassert.fn.type
----@field is_thread luassert.fn.type
----@field is_returned_arguments luassert.fn.returned_arguments
----@field is_same luassert.fn.same
----@field is_matches luassert.fn.matches
----@field is_match luassert.fn.matches
----@field is_near luassert.fn.near
----@field is_equals luassert.fn.equals
----@field is_equal luassert.fn.equals
----@field is_unique luassert.fn.unique
----@field is_error luassert.fn.error
----@field is_errors luassert.fn.error
----@field is_error_matches luassert.fn.error_matches
----@field is_error_match luassert.fn.error_matches
----@field is_matches_error luassert.fn.error_matches
----@field is_match_error luassert.fn.error_matches
----@field is_truthy luassert.fn.truthy
----@field is_falsy luassert.fn.falsy
----@field is_returned_with luassert.fn.returned_with
----@field is_called_with luassert.fn.called_with
----@field is_called luassert.fn.called
----@field is_called_at_least luassert.fn.called_n
----@field is_called_at_most luassert.fn.called_n
----@field is_called_more_than luassert.fn.called_n
----@field is_called_less_than luassert.fn.called_n
----@field is_holes luassert.fn.holes
----@field is_not_true luassert.fn.is_true
----@field is_not_false luassert.fn.is_false
----@field is_not_boolean luassert.fn.type
----@field is_not_number luassert.fn.type
----@field is_not_string luassert.fn.type
----@field is_not_table luassert.fn.type
----@field is_not_nil luassert.fn.type
----@field is_not_userdata luassert.fn.type
----@field is_not_function luassert.fn.type
----@field is_not_thread luassert.fn.type
----@field is_not_returned_arguments luassert.fn.returned_arguments
----@field is_not_same luassert.fn.same
----@field is_not_matches luassert.fn.matches
----@field is_not_match luassert.fn.matches
----@field is_not_near luassert.fn.near
----@field is_not_equals luassert.fn.equals
----@field is_not_equal luassert.fn.equals
----@field is_not_unique luassert.fn.unique
----@field is_not_error luassert.fn.error
----@field is_not_errors luassert.fn.error
----@field is_not_error_matches luassert.fn.error_matches
----@field is_not_error_match luassert.fn.error_matches
----@field is_not_matches_error luassert.fn.error_matches
----@field is_not_match_error luassert.fn.error_matches
----@field is_not_truthy luassert.fn.truthy
----@field is_not_falsy luassert.fn.falsy
----@field is_not_returned_with luassert.fn.returned_with
----@field is_not_called_with luassert.fn.called_with
----@field is_not_called luassert.fn.called
----@field is_not_called_at_least luassert.fn.called_n
----@field is_not_called_at_most luassert.fn.called_n
----@field is_not_called_more_than luassert.fn.called_n
----@field is_not_called_less_than luassert.fn.called_n
----@field is_not_holes luassert.fn.holes
----@field are_true luassert.fn.is_true
----@field are_false luassert.fn.is_false
----@field are_boolean luassert.fn.type
----@field are_number luassert.fn.type
----@field are_string luassert.fn.type
----@field are_table luassert.fn.type
----@field are_nil luassert.fn.type
----@field are_userdata luassert.fn.type
----@field are_function luassert.fn.type
----@field are_thread luassert.fn.type
----@field are_returned_arguments luassert.fn.returned_arguments
----@field are_same luassert.fn.same
----@field are_matches luassert.fn.matches
----@field are_match luassert.fn.matches
----@field are_near luassert.fn.near
----@field are_equals luassert.fn.equals
----@field are_equal luassert.fn.equals
----@field are_unique luassert.fn.unique
----@field are_error luassert.fn.error
----@field are_errors luassert.fn.error
----@field are_error_matches luassert.fn.error_matches
----@field are_error_match luassert.fn.error_matches
----@field are_matches_error luassert.fn.error_matches
----@field are_match_error luassert.fn.error_matches
----@field are_truthy luassert.fn.truthy
----@field are_falsy luassert.fn.falsy
----@field are_returned_with luassert.fn.returned_with
----@field are_called_with luassert.fn.called_with
----@field are_called luassert.fn.called
----@field are_called_at_least luassert.fn.called_n
----@field are_called_at_most luassert.fn.called_n
----@field are_called_more_than luassert.fn.called_n
----@field are_called_less_than luassert.fn.called_n
----@field are_holes luassert.fn.holes
----@field are_not_true luassert.fn.is_true
----@field are_not_false luassert.fn.is_false
----@field are_not_boolean luassert.fn.type
----@field are_not_number luassert.fn.type
----@field are_not_string luassert.fn.type
----@field are_not_table luassert.fn.type
----@field are_not_nil luassert.fn.type
----@field are_not_userdata luassert.fn.type
----@field are_not_function luassert.fn.type
----@field are_not_thread luassert.fn.type
----@field are_not_returned_arguments luassert.fn.returned_arguments
----@field are_not_same luassert.fn.same
----@field are_not_matches luassert.fn.matches
----@field are_not_match luassert.fn.matches
----@field are_not_near luassert.fn.near
----@field are_not_equals luassert.fn.equals
----@field are_not_equal luassert.fn.equals
----@field are_not_unique luassert.fn.unique
----@field are_not_error luassert.fn.error
----@field are_not_errors luassert.fn.error
----@field are_not_error_matches luassert.fn.error_matches
----@field are_not_error_match luassert.fn.error_matches
----@field are_not_matches_error luassert.fn.error_matches
----@field are_not_match_error luassert.fn.error_matches
----@field are_not_truthy luassert.fn.truthy
----@field are_not_falsy luassert.fn.falsy
----@field are_not_returned_with luassert.fn.returned_with
----@field are_not_called_with luassert.fn.called_with
----@field are_not_called luassert.fn.called
----@field are_not_called_at_least luassert.fn.called_n
----@field are_not_called_at_most luassert.fn.called_n
----@field are_not_called_more_than luassert.fn.called_n
----@field are_not_called_less_than luassert.fn.called_n
----@field are_not_holes luassert.fn.holes
----@field was_true luassert.fn.is_true
----@field was_false luassert.fn.is_false
----@field was_boolean luassert.fn.type
----@field was_number luassert.fn.type
----@field was_string luassert.fn.type
----@field was_table luassert.fn.type
----@field was_nil luassert.fn.type
----@field was_userdata luassert.fn.type
----@field was_function luassert.fn.type
----@field was_thread luassert.fn.type
----@field was_returned_arguments luassert.fn.returned_arguments
----@field was_same luassert.fn.same
----@field was_matches luassert.fn.matches
----@field was_match luassert.fn.matches
----@field was_near luassert.fn.near
----@field was_equals luassert.fn.equals
----@field was_equal luassert.fn.equals
----@field was_unique luassert.fn.unique
----@field was_error luassert.fn.error
----@field was_errors luassert.fn.error
----@field was_error_matches luassert.fn.error_matches
----@field was_error_match luassert.fn.error_matches
----@field was_matches_error luassert.fn.error_matches
----@field was_match_error luassert.fn.error_matches
----@field was_truthy luassert.fn.truthy
----@field was_falsy luassert.fn.falsy
----@field was_returned_with luassert.fn.returned_with
----@field was_called_with luassert.fn.called_with
----@field was_called luassert.fn.called
----@field was_called_at_least luassert.fn.called_n
----@field was_called_at_most luassert.fn.called_n
----@field was_called_more_than luassert.fn.called_n
----@field was_called_less_than luassert.fn.called_n
----@field was_holes luassert.fn.holes
----@field was_not_true luassert.fn.is_true
----@field was_not_false luassert.fn.is_false
----@field was_not_boolean luassert.fn.type
----@field was_not_number luassert.fn.type
----@field was_not_string luassert.fn.type
----@field was_not_table luassert.fn.type
----@field was_not_nil luassert.fn.type
----@field was_not_userdata luassert.fn.type
----@field was_not_function luassert.fn.type
----@field was_not_thread luassert.fn.type
----@field was_not_returned_arguments luassert.fn.returned_arguments
----@field was_not_same luassert.fn.same
----@field was_not_matches luassert.fn.matches
----@field was_not_match luassert.fn.matches
----@field was_not_near luassert.fn.near
----@field was_not_equals luassert.fn.equals
----@field was_not_equal luassert.fn.equals
----@field was_not_unique luassert.fn.unique
----@field was_not_error luassert.fn.error
----@field was_not_errors luassert.fn.error
----@field was_not_error_matches luassert.fn.error_matches
----@field was_not_error_match luassert.fn.error_matches
----@field was_not_matches_error luassert.fn.error_matches
----@field was_not_match_error luassert.fn.error_matches
----@field was_not_truthy luassert.fn.truthy
----@field was_not_falsy luassert.fn.falsy
----@field was_not_returned_with luassert.fn.returned_with
----@field was_not_called_with luassert.fn.called_with
----@field was_not_called luassert.fn.called
----@field was_not_called_at_least luassert.fn.called_n
----@field was_not_called_at_most luassert.fn.called_n
----@field was_not_called_more_than luassert.fn.called_n
----@field was_not_called_less_than luassert.fn.called_n
----@field was_not_holes luassert.fn.holes
----@field has_true luassert.fn.is_true
----@field has_false luassert.fn.is_false
----@field has_boolean luassert.fn.type
----@field has_number luassert.fn.type
----@field has_string luassert.fn.type
----@field has_table luassert.fn.type
----@field has_nil luassert.fn.type
----@field has_userdata luassert.fn.type
----@field has_function luassert.fn.type
----@field has_thread luassert.fn.type
----@field has_returned_arguments luassert.fn.returned_arguments
----@field has_same luassert.fn.same
----@field has_matches luassert.fn.matches
----@field has_match luassert.fn.matches
----@field has_near luassert.fn.near
----@field has_equals luassert.fn.equals
----@field has_equal luassert.fn.equals
----@field has_unique luassert.fn.unique
----@field has_error luassert.fn.error
----@field has_errors luassert.fn.error
----@field has_error_matches luassert.fn.error_matches
----@field has_error_match luassert.fn.error_matches
----@field has_matches_error luassert.fn.error_matches
----@field has_match_error luassert.fn.error_matches
----@field has_truthy luassert.fn.truthy
----@field has_falsy luassert.fn.falsy
----@field has_returned_with luassert.fn.returned_with
----@field has_called_with luassert.fn.called_with
----@field has_called luassert.fn.called
----@field has_called_at_least luassert.fn.called_n
----@field has_called_at_most luassert.fn.called_n
----@field has_called_more_than luassert.fn.called_n
----@field has_called_less_than luassert.fn.called_n
----@field has_holes luassert.fn.holes
----@field has_no_true luassert.fn.is_true
----@field has_no_false luassert.fn.is_false
----@field has_no_boolean luassert.fn.type
----@field has_no_number luassert.fn.type
----@field has_no_string luassert.fn.type
----@field has_no_table luassert.fn.type
----@field has_no_nil luassert.fn.type
----@field has_no_userdata luassert.fn.type
----@field has_no_function luassert.fn.type
----@field has_no_thread luassert.fn.type
----@field has_no_returned_arguments luassert.fn.returned_arguments
----@field has_no_same luassert.fn.same
----@field has_no_matches luassert.fn.matches
----@field has_no_match luassert.fn.matches
----@field has_no_near luassert.fn.near
----@field has_no_equals luassert.fn.equals
----@field has_no_equal luassert.fn.equals
----@field has_no_unique luassert.fn.unique
----@field has_no_error luassert.fn.error
----@field has_no_errors luassert.fn.error
----@field has_no_error_matches luassert.fn.error_matches
----@field has_no_error_match luassert.fn.error_matches
----@field has_no_matches_error luassert.fn.error_matches
----@field has_no_match_error luassert.fn.error_matches
----@field has_no_truthy luassert.fn.truthy
----@field has_no_falsy luassert.fn.falsy
----@field has_no_returned_with luassert.fn.returned_with
----@field has_no_called_with luassert.fn.called_with
----@field has_no_called luassert.fn.called
----@field has_no_called_at_least luassert.fn.called_n
----@field has_no_called_at_most luassert.fn.called_n
----@field has_no_called_more_than luassert.fn.called_n
----@field has_no_called_less_than luassert.fn.called_n
----@field has_no_holes luassert.fn.holes
----@field does_true luassert.fn.is_true
----@field does_false luassert.fn.is_false
----@field does_boolean luassert.fn.type
----@field does_number luassert.fn.type
----@field does_string luassert.fn.type
----@field does_table luassert.fn.type
----@field does_nil luassert.fn.type
----@field does_userdata luassert.fn.type
----@field does_function luassert.fn.type
----@field does_thread luassert.fn.type
----@field does_returned_arguments luassert.fn.returned_arguments
----@field does_same luassert.fn.same
----@field does_matches luassert.fn.matches
----@field does_match luassert.fn.matches
----@field does_near luassert.fn.near
----@field does_equals luassert.fn.equals
----@field does_equal luassert.fn.equals
----@field does_unique luassert.fn.unique
----@field does_error luassert.fn.error
----@field does_errors luassert.fn.error
----@field does_error_matches luassert.fn.error_matches
----@field does_error_match luassert.fn.error_matches
----@field does_matches_error luassert.fn.error_matches
----@field does_match_error luassert.fn.error_matches
----@field does_truthy luassert.fn.truthy
----@field does_falsy luassert.fn.falsy
----@field does_returned_with luassert.fn.returned_with
----@field does_called_with luassert.fn.called_with
----@field does_called luassert.fn.called
----@field does_called_at_least luassert.fn.called_n
----@field does_called_at_most luassert.fn.called_n
----@field does_called_more_than luassert.fn.called_n
----@field does_called_less_than luassert.fn.called_n
----@field does_holes luassert.fn.holes
----@field does_not_true luassert.fn.is_true
----@field does_not_false luassert.fn.is_false
----@field does_not_boolean luassert.fn.type
----@field does_not_number luassert.fn.type
----@field does_not_string luassert.fn.type
----@field does_not_table luassert.fn.type
----@field does_not_nil luassert.fn.type
----@field does_not_userdata luassert.fn.type
----@field does_not_function luassert.fn.type
----@field does_not_thread luassert.fn.type
----@field does_not_returned_arguments luassert.fn.returned_arguments
----@field does_not_same luassert.fn.same
----@field does_not_matches luassert.fn.matches
----@field does_not_match luassert.fn.matches
----@field does_not_near luassert.fn.near
----@field does_not_equals luassert.fn.equals
----@field does_not_equal luassert.fn.equals
----@field does_not_unique luassert.fn.unique
----@field does_not_error luassert.fn.error
----@field does_not_errors luassert.fn.error
----@field does_not_error_matches luassert.fn.error_matches
----@field does_not_error_match luassert.fn.error_matches
----@field does_not_matches_error luassert.fn.error_matches
----@field does_not_match_error luassert.fn.error_matches
----@field does_not_truthy luassert.fn.truthy
----@field does_not_falsy luassert.fn.falsy
----@field does_not_returned_with luassert.fn.returned_with
----@field does_not_called_with luassert.fn.called_with
----@field does_not_called luassert.fn.called
----@field does_not_called_at_least luassert.fn.called_n
----@field does_not_called_at_most luassert.fn.called_n
----@field does_not_called_more_than luassert.fn.called_n
----@field does_not_called_less_than luassert.fn.called_n
----@field does_not_holes luassert.fn.holes
+---@field not_true fun(value: any, message?: string): any
+---@field not_false fun(value: any, message?: string): any
+---@field not_boolean fun(value: any, message?: string): any
+---@field not_number fun(value: any, message?: string): any
+---@field not_string fun(value: any, message?: string): any
+---@field not_table fun(value: any, message?: string): any
+---@field not_nil fun(value: any, message?: string): any
+---@field not_userdata fun(value: any, message?: string): any
+---@field not_function fun(value: any, message?: string): any
+---@field not_thread fun(value: any, message?: string): any
+---@field not_returned_arguments fun(count: integer, ...: any): any
+---@field not_same fun(expected: any, actual: any, message?: string): any
+---@field not_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field not_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field not_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field not_equals fun(expected: any, actual: any, message?: string): any
+---@field not_equal fun(expected: any, actual: any, message?: string): any
+---@field not_unique fun(list: table, deep?: boolean, message?: string): any
+---@field not_error fun(fn: function, expected_err?: any, message?: string): any
+---@field not_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field not_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field not_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field not_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field not_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field not_truthy fun(value: any, message?: string): any
+---@field not_falsy fun(value: any, message?: string): any
+---@field not_returned_with fun(...: any)
+---@field not_called_with fun(...: any)
+---@field not_called fun(times?: integer)
+---@field not_called_at_least fun(times: integer)
+---@field not_called_at_most fun(times: integer)
+---@field not_called_more_than fun(times: integer)
+---@field not_called_less_than fun(times: integer)
+---@field not_holes fun(length?: integer): integer?
+---@field no_true fun(value: any, message?: string): any
+---@field no_false fun(value: any, message?: string): any
+---@field no_boolean fun(value: any, message?: string): any
+---@field no_number fun(value: any, message?: string): any
+---@field no_string fun(value: any, message?: string): any
+---@field no_table fun(value: any, message?: string): any
+---@field no_nil fun(value: any, message?: string): any
+---@field no_userdata fun(value: any, message?: string): any
+---@field no_function fun(value: any, message?: string): any
+---@field no_thread fun(value: any, message?: string): any
+---@field no_returned_arguments fun(count: integer, ...: any): any
+---@field no_same fun(expected: any, actual: any, message?: string): any
+---@field no_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field no_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field no_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field no_equals fun(expected: any, actual: any, message?: string): any
+---@field no_equal fun(expected: any, actual: any, message?: string): any
+---@field no_unique fun(list: table, deep?: boolean, message?: string): any
+---@field no_error fun(fn: function, expected_err?: any, message?: string): any
+---@field no_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field no_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field no_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field no_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field no_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field no_truthy fun(value: any, message?: string): any
+---@field no_falsy fun(value: any, message?: string): any
+---@field no_returned_with fun(...: any)
+---@field no_called_with fun(...: any)
+---@field no_called fun(times?: integer)
+---@field no_called_at_least fun(times: integer)
+---@field no_called_at_most fun(times: integer)
+---@field no_called_more_than fun(times: integer)
+---@field no_called_less_than fun(times: integer)
+---@field no_holes fun(length?: integer): integer?
+---@field is_true fun(value: any, message?: string): any
+---@field is_false fun(value: any, message?: string): any
+---@field is_boolean fun(value: any, message?: string): any
+---@field is_number fun(value: any, message?: string): any
+---@field is_string fun(value: any, message?: string): any
+---@field is_table fun(value: any, message?: string): any
+---@field is_nil fun(value: any, message?: string): any
+---@field is_userdata fun(value: any, message?: string): any
+---@field is_function fun(value: any, message?: string): any
+---@field is_thread fun(value: any, message?: string): any
+---@field is_returned_arguments fun(count: integer, ...: any): any
+---@field is_same fun(expected: any, actual: any, message?: string): any
+---@field is_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field is_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field is_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field is_equals fun(expected: any, actual: any, message?: string): any
+---@field is_equal fun(expected: any, actual: any, message?: string): any
+---@field is_unique fun(list: table, deep?: boolean, message?: string): any
+---@field is_error fun(fn: function, expected_err?: any, message?: string): any
+---@field is_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field is_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_truthy fun(value: any, message?: string): any
+---@field is_falsy fun(value: any, message?: string): any
+---@field is_returned_with fun(...: any)
+---@field is_called_with fun(...: any)
+---@field is_called fun(times?: integer)
+---@field is_called_at_least fun(times: integer)
+---@field is_called_at_most fun(times: integer)
+---@field is_called_more_than fun(times: integer)
+---@field is_called_less_than fun(times: integer)
+---@field is_holes fun(length?: integer): integer?
+---@field is_not_true fun(value: any, message?: string): any
+---@field is_not_false fun(value: any, message?: string): any
+---@field is_not_boolean fun(value: any, message?: string): any
+---@field is_not_number fun(value: any, message?: string): any
+---@field is_not_string fun(value: any, message?: string): any
+---@field is_not_table fun(value: any, message?: string): any
+---@field is_not_nil fun(value: any, message?: string): any
+---@field is_not_userdata fun(value: any, message?: string): any
+---@field is_not_function fun(value: any, message?: string): any
+---@field is_not_thread fun(value: any, message?: string): any
+---@field is_not_returned_arguments fun(count: integer, ...: any): any
+---@field is_not_same fun(expected: any, actual: any, message?: string): any
+---@field is_not_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field is_not_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field is_not_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field is_not_equals fun(expected: any, actual: any, message?: string): any
+---@field is_not_equal fun(expected: any, actual: any, message?: string): any
+---@field is_not_unique fun(list: table, deep?: boolean, message?: string): any
+---@field is_not_error fun(fn: function, expected_err?: any, message?: string): any
+---@field is_not_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field is_not_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_not_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_not_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_not_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field is_not_truthy fun(value: any, message?: string): any
+---@field is_not_falsy fun(value: any, message?: string): any
+---@field is_not_returned_with fun(...: any)
+---@field is_not_called_with fun(...: any)
+---@field is_not_called fun(times?: integer)
+---@field is_not_called_at_least fun(times: integer)
+---@field is_not_called_at_most fun(times: integer)
+---@field is_not_called_more_than fun(times: integer)
+---@field is_not_called_less_than fun(times: integer)
+---@field is_not_holes fun(length?: integer): integer?
+---@field are_true fun(value: any, message?: string): any
+---@field are_false fun(value: any, message?: string): any
+---@field are_boolean fun(value: any, message?: string): any
+---@field are_number fun(value: any, message?: string): any
+---@field are_string fun(value: any, message?: string): any
+---@field are_table fun(value: any, message?: string): any
+---@field are_nil fun(value: any, message?: string): any
+---@field are_userdata fun(value: any, message?: string): any
+---@field are_function fun(value: any, message?: string): any
+---@field are_thread fun(value: any, message?: string): any
+---@field are_returned_arguments fun(count: integer, ...: any): any
+---@field are_same fun(expected: any, actual: any, message?: string): any
+---@field are_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field are_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field are_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field are_equals fun(expected: any, actual: any, message?: string): any
+---@field are_equal fun(expected: any, actual: any, message?: string): any
+---@field are_unique fun(list: table, deep?: boolean, message?: string): any
+---@field are_error fun(fn: function, expected_err?: any, message?: string): any
+---@field are_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field are_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_truthy fun(value: any, message?: string): any
+---@field are_falsy fun(value: any, message?: string): any
+---@field are_returned_with fun(...: any)
+---@field are_called_with fun(...: any)
+---@field are_called fun(times?: integer)
+---@field are_called_at_least fun(times: integer)
+---@field are_called_at_most fun(times: integer)
+---@field are_called_more_than fun(times: integer)
+---@field are_called_less_than fun(times: integer)
+---@field are_holes fun(length?: integer): integer?
+---@field are_not_true fun(value: any, message?: string): any
+---@field are_not_false fun(value: any, message?: string): any
+---@field are_not_boolean fun(value: any, message?: string): any
+---@field are_not_number fun(value: any, message?: string): any
+---@field are_not_string fun(value: any, message?: string): any
+---@field are_not_table fun(value: any, message?: string): any
+---@field are_not_nil fun(value: any, message?: string): any
+---@field are_not_userdata fun(value: any, message?: string): any
+---@field are_not_function fun(value: any, message?: string): any
+---@field are_not_thread fun(value: any, message?: string): any
+---@field are_not_returned_arguments fun(count: integer, ...: any): any
+---@field are_not_same fun(expected: any, actual: any, message?: string): any
+---@field are_not_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field are_not_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field are_not_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field are_not_equals fun(expected: any, actual: any, message?: string): any
+---@field are_not_equal fun(expected: any, actual: any, message?: string): any
+---@field are_not_unique fun(list: table, deep?: boolean, message?: string): any
+---@field are_not_error fun(fn: function, expected_err?: any, message?: string): any
+---@field are_not_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field are_not_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_not_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_not_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_not_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field are_not_truthy fun(value: any, message?: string): any
+---@field are_not_falsy fun(value: any, message?: string): any
+---@field are_not_returned_with fun(...: any)
+---@field are_not_called_with fun(...: any)
+---@field are_not_called fun(times?: integer)
+---@field are_not_called_at_least fun(times: integer)
+---@field are_not_called_at_most fun(times: integer)
+---@field are_not_called_more_than fun(times: integer)
+---@field are_not_called_less_than fun(times: integer)
+---@field are_not_holes fun(length?: integer): integer?
+---@field was_true fun(value: any, message?: string): any
+---@field was_false fun(value: any, message?: string): any
+---@field was_boolean fun(value: any, message?: string): any
+---@field was_number fun(value: any, message?: string): any
+---@field was_string fun(value: any, message?: string): any
+---@field was_table fun(value: any, message?: string): any
+---@field was_nil fun(value: any, message?: string): any
+---@field was_userdata fun(value: any, message?: string): any
+---@field was_function fun(value: any, message?: string): any
+---@field was_thread fun(value: any, message?: string): any
+---@field was_returned_arguments fun(count: integer, ...: any): any
+---@field was_same fun(expected: any, actual: any, message?: string): any
+---@field was_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field was_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field was_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field was_equals fun(expected: any, actual: any, message?: string): any
+---@field was_equal fun(expected: any, actual: any, message?: string): any
+---@field was_unique fun(list: table, deep?: boolean, message?: string): any
+---@field was_error fun(fn: function, expected_err?: any, message?: string): any
+---@field was_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field was_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_truthy fun(value: any, message?: string): any
+---@field was_falsy fun(value: any, message?: string): any
+---@field was_returned_with fun(...: any)
+---@field was_called_with fun(...: any)
+---@field was_called fun(times?: integer)
+---@field was_called_at_least fun(times: integer)
+---@field was_called_at_most fun(times: integer)
+---@field was_called_more_than fun(times: integer)
+---@field was_called_less_than fun(times: integer)
+---@field was_holes fun(length?: integer): integer?
+---@field was_not_true fun(value: any, message?: string): any
+---@field was_not_false fun(value: any, message?: string): any
+---@field was_not_boolean fun(value: any, message?: string): any
+---@field was_not_number fun(value: any, message?: string): any
+---@field was_not_string fun(value: any, message?: string): any
+---@field was_not_table fun(value: any, message?: string): any
+---@field was_not_nil fun(value: any, message?: string): any
+---@field was_not_userdata fun(value: any, message?: string): any
+---@field was_not_function fun(value: any, message?: string): any
+---@field was_not_thread fun(value: any, message?: string): any
+---@field was_not_returned_arguments fun(count: integer, ...: any): any
+---@field was_not_same fun(expected: any, actual: any, message?: string): any
+---@field was_not_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field was_not_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field was_not_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field was_not_equals fun(expected: any, actual: any, message?: string): any
+---@field was_not_equal fun(expected: any, actual: any, message?: string): any
+---@field was_not_unique fun(list: table, deep?: boolean, message?: string): any
+---@field was_not_error fun(fn: function, expected_err?: any, message?: string): any
+---@field was_not_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field was_not_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_not_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_not_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_not_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field was_not_truthy fun(value: any, message?: string): any
+---@field was_not_falsy fun(value: any, message?: string): any
+---@field was_not_returned_with fun(...: any)
+---@field was_not_called_with fun(...: any)
+---@field was_not_called fun(times?: integer)
+---@field was_not_called_at_least fun(times: integer)
+---@field was_not_called_at_most fun(times: integer)
+---@field was_not_called_more_than fun(times: integer)
+---@field was_not_called_less_than fun(times: integer)
+---@field was_not_holes fun(length?: integer): integer?
+---@field has_true fun(value: any, message?: string): any
+---@field has_false fun(value: any, message?: string): any
+---@field has_boolean fun(value: any, message?: string): any
+---@field has_number fun(value: any, message?: string): any
+---@field has_string fun(value: any, message?: string): any
+---@field has_table fun(value: any, message?: string): any
+---@field has_nil fun(value: any, message?: string): any
+---@field has_userdata fun(value: any, message?: string): any
+---@field has_function fun(value: any, message?: string): any
+---@field has_thread fun(value: any, message?: string): any
+---@field has_returned_arguments fun(count: integer, ...: any): any
+---@field has_same fun(expected: any, actual: any, message?: string): any
+---@field has_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field has_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field has_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field has_equals fun(expected: any, actual: any, message?: string): any
+---@field has_equal fun(expected: any, actual: any, message?: string): any
+---@field has_unique fun(list: table, deep?: boolean, message?: string): any
+---@field has_error fun(fn: function, expected_err?: any, message?: string): any
+---@field has_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field has_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_truthy fun(value: any, message?: string): any
+---@field has_falsy fun(value: any, message?: string): any
+---@field has_returned_with fun(...: any)
+---@field has_called_with fun(...: any)
+---@field has_called fun(times?: integer)
+---@field has_called_at_least fun(times: integer)
+---@field has_called_at_most fun(times: integer)
+---@field has_called_more_than fun(times: integer)
+---@field has_called_less_than fun(times: integer)
+---@field has_holes fun(length?: integer): integer?
+---@field has_no_true fun(value: any, message?: string): any
+---@field has_no_false fun(value: any, message?: string): any
+---@field has_no_boolean fun(value: any, message?: string): any
+---@field has_no_number fun(value: any, message?: string): any
+---@field has_no_string fun(value: any, message?: string): any
+---@field has_no_table fun(value: any, message?: string): any
+---@field has_no_nil fun(value: any, message?: string): any
+---@field has_no_userdata fun(value: any, message?: string): any
+---@field has_no_function fun(value: any, message?: string): any
+---@field has_no_thread fun(value: any, message?: string): any
+---@field has_no_returned_arguments fun(count: integer, ...: any): any
+---@field has_no_same fun(expected: any, actual: any, message?: string): any
+---@field has_no_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field has_no_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field has_no_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field has_no_equals fun(expected: any, actual: any, message?: string): any
+---@field has_no_equal fun(expected: any, actual: any, message?: string): any
+---@field has_no_unique fun(list: table, deep?: boolean, message?: string): any
+---@field has_no_error fun(fn: function, expected_err?: any, message?: string): any
+---@field has_no_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field has_no_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_no_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_no_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_no_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field has_no_truthy fun(value: any, message?: string): any
+---@field has_no_falsy fun(value: any, message?: string): any
+---@field has_no_returned_with fun(...: any)
+---@field has_no_called_with fun(...: any)
+---@field has_no_called fun(times?: integer)
+---@field has_no_called_at_least fun(times: integer)
+---@field has_no_called_at_most fun(times: integer)
+---@field has_no_called_more_than fun(times: integer)
+---@field has_no_called_less_than fun(times: integer)
+---@field has_no_holes fun(length?: integer): integer?
+---@field does_true fun(value: any, message?: string): any
+---@field does_false fun(value: any, message?: string): any
+---@field does_boolean fun(value: any, message?: string): any
+---@field does_number fun(value: any, message?: string): any
+---@field does_string fun(value: any, message?: string): any
+---@field does_table fun(value: any, message?: string): any
+---@field does_nil fun(value: any, message?: string): any
+---@field does_userdata fun(value: any, message?: string): any
+---@field does_function fun(value: any, message?: string): any
+---@field does_thread fun(value: any, message?: string): any
+---@field does_returned_arguments fun(count: integer, ...: any): any
+---@field does_same fun(expected: any, actual: any, message?: string): any
+---@field does_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field does_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field does_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field does_equals fun(expected: any, actual: any, message?: string): any
+---@field does_equal fun(expected: any, actual: any, message?: string): any
+---@field does_unique fun(list: table, deep?: boolean, message?: string): any
+---@field does_error fun(fn: function, expected_err?: any, message?: string): any
+---@field does_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field does_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_truthy fun(value: any, message?: string): any
+---@field does_falsy fun(value: any, message?: string): any
+---@field does_returned_with fun(...: any)
+---@field does_called_with fun(...: any)
+---@field does_called fun(times?: integer)
+---@field does_called_at_least fun(times: integer)
+---@field does_called_at_most fun(times: integer)
+---@field does_called_more_than fun(times: integer)
+---@field does_called_less_than fun(times: integer)
+---@field does_holes fun(length?: integer): integer?
+---@field does_not_true fun(value: any, message?: string): any
+---@field does_not_false fun(value: any, message?: string): any
+---@field does_not_boolean fun(value: any, message?: string): any
+---@field does_not_number fun(value: any, message?: string): any
+---@field does_not_string fun(value: any, message?: string): any
+---@field does_not_table fun(value: any, message?: string): any
+---@field does_not_nil fun(value: any, message?: string): any
+---@field does_not_userdata fun(value: any, message?: string): any
+---@field does_not_function fun(value: any, message?: string): any
+---@field does_not_thread fun(value: any, message?: string): any
+---@field does_not_returned_arguments fun(count: integer, ...: any): any
+---@field does_not_same fun(expected: any, actual: any, message?: string): any
+---@field does_not_matches fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field does_not_match fun(pattern: string, actual: string|number, init?: integer, plain?: boolean, message?: string): any
+---@field does_not_near fun(expected: number, actual: number, tolerance: number, message?: string): any
+---@field does_not_equals fun(expected: any, actual: any, message?: string): any
+---@field does_not_equal fun(expected: any, actual: any, message?: string): any
+---@field does_not_unique fun(list: table, deep?: boolean, message?: string): any
+---@field does_not_error fun(fn: function, expected_err?: any, message?: string): any
+---@field does_not_errors fun(fn: function, expected_err?: any, message?: string): any
+---@field does_not_error_matches fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_not_error_match fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_not_matches_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_not_match_error fun(fn: function, pattern: string, init?: integer, plain?: boolean, message?: string): string?
+---@field does_not_truthy fun(value: any, message?: string): any
+---@field does_not_falsy fun(value: any, message?: string): any
+---@field does_not_returned_with fun(...: any)
+---@field does_not_called_with fun(...: any)
+---@field does_not_called fun(times?: integer)
+---@field does_not_called_at_least fun(times: integer)
+---@field does_not_called_at_most fun(times: integer)
+---@field does_not_called_more_than fun(times: integer)
+---@field does_not_called_less_than fun(times: integer)
+---@field does_not_holes fun(length?: integer): integer?
 
 -- A chain in progress (what every modifier returns) ------------------------
 
