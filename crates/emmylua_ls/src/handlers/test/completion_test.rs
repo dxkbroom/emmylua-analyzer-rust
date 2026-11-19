@@ -3123,4 +3123,33 @@ items.<??>
         ));
         Ok(())
     }
+
+    #[gtest]
+    fn test_std_lib_table_aliased_into_local_completion() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new_with_init_std_lib();
+        for (alias, direct, expected) in [
+            ("local s = string\ns.<??>", "string.<??>", "format"),
+            ("local m = math\nm.<??>", "math.<??>", "floor"),
+            ("local t = table\nt.<??>", "table.<??>", "concat"),
+        ] {
+            let labels = |items: Vec<CompletionItem>| {
+                let mut labels: Vec<String> = items.into_iter().map(|item| item.label).collect();
+                labels.sort();
+                labels
+            };
+            let alias_labels = labels(get_completion_items(
+                &mut ws,
+                alias,
+                CompletionTriggerKind::INVOKED,
+            )?);
+            let direct_labels = labels(get_completion_items(
+                &mut ws,
+                direct,
+                CompletionTriggerKind::INVOKED,
+            )?);
+            verify_that!(alias_labels, contains(eq(expected)))?;
+            verify_eq!(alias_labels, direct_labels)?;
+        }
+        Ok(())
+    }
 }
