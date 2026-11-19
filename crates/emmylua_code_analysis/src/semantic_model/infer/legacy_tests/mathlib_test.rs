@@ -36,4 +36,55 @@ mod test {
         assert_eq!(ws.expr_ty("math.random(10)"), ws.ty("integer"));
         assert_eq!(ws.expr_ty("math.random(1, 10)"), ws.ty("integer"));
     }
+
+    #[test]
+    fn test_std_lib_table_aliased_into_local_keeps_members() {
+        let mut ws = VirtualWorkspace::new_with_init_std_lib();
+        ws.def(
+            r#"
+            local s = string
+            local m = math
+            local t = table
+            StrFormat = s.format("%d", 1)
+            MathFloor = m.floor(1.5)
+            TableConcat = t.concat({})
+            "#,
+        );
+        assert_eq!(ws.expr_ty("StrFormat"), ws.ty("string"));
+        assert_eq!(ws.expr_ty("MathFloor"), ws.ty("integer"));
+        assert_eq!(ws.expr_ty("TableConcat"), ws.ty("string"));
+    }
+
+    #[test]
+    fn test_global_table_alias_chain_and_reassignment() {
+        let mut ws = VirtualWorkspace::new_with_init_std_lib();
+        ws.def_file(
+            "lib.lua",
+            "---@class mylib\nmy_lib = {}\n---@return integer\nfunction my_lib.answer() end\n",
+        );
+        ws.def(
+            r#"
+            local a = math
+            local b = a
+            ChainFloor = b.floor(1.5)
+            local l = my_lib
+            CrossFileAnswer = l.answer()
+            local s = string
+            s = { x = 1 }
+            ReassignedFormat = s.format
+            "#,
+        );
+        assert_eq!(ws.expr_ty("ChainFloor"), ws.ty("integer"));
+        assert_eq!(ws.expr_ty("CrossFileAnswer"), ws.ty("integer"));
+        let reassigned = ws.expr_ty("ReassignedFormat");
+        assert!(
+            !matches!(
+                reassigned,
+                crate::LuaType::Signature(_)
+                    | crate::LuaType::DocFunction(_)
+                    | crate::LuaType::Function
+            ),
+            "reassigned local must not see string members: {reassigned:?}"
+        );
+    }
 }

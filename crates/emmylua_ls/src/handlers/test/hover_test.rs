@@ -1032,4 +1032,67 @@ mod tests {
         );
         Ok(())
     }
+
+    fn hover_markup(ws: &mut ProviderVirtualWorkspace, block_str: &str) -> Result<String> {
+        let (content, position) = ProviderVirtualWorkspace::handle_file_content(block_str)?;
+        let file_id = ws.def(&content);
+        let result = hover(&ws.analysis, file_id, position)
+            .ok_or("couldn't get a hover")
+            .or_fail()?;
+        let HoverContents::Markup(markup) = result.contents else {
+            return Err("expected HoverContents::Markup").or_fail();
+        };
+        Ok(markup.value)
+    }
+
+    // `local m = math` keeps the members declared as `function math.floor` (std tables
+    // whose class name differs from the global, like `mathlib`, included).
+    #[gtest]
+    fn test_hover_std_lib_table_aliased_into_local() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new_with_init_std_lib();
+        for (alias, direct, prefix) in [
+            (
+                "local s = string\nlocal x = s.for<??>mat('%d', 1)",
+                "local x = string.for<??>mat('%d', 1)",
+                "```lua\nfunction string.format(",
+            ),
+            (
+                "local m = math\nlocal x = m.fl<??>oor(1.5)",
+                "local x = math.fl<??>oor(1.5)",
+                "```lua\nfunction math.floor(",
+            ),
+            (
+                "local t = table\nlocal x = t.con<??>cat({})",
+                "local x = table.con<??>cat({})",
+                "```lua\nfunction table.concat(",
+            ),
+            (
+                "local a = math\nlocal b = a\nlocal x = b.fl<??>oor(1.5)",
+                "local x = math.fl<??>oor(1.5)",
+                "```lua\nfunction math.floor(",
+            ),
+        ] {
+            let alias_value = hover_markup(&mut ws, alias)?;
+            let direct_value = hover_markup(&mut ws, direct)?;
+            verify_that!(alias_value, starts_with(prefix))?;
+            verify_eq!(alias_value, direct_value)?;
+        }
+        Ok(())
+    }
+
+    #[gtest]
+    fn test_hover_global_class_table_aliased_into_local_cross_file() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new();
+        ws.def_file(
+            "lib.lua",
+            "---@class mylib\nmy_lib = {}\n---@return integer\nfunction my_lib.answer() end\n",
+        );
+        let alias_value = hover_markup(&mut ws, "local l = my_lib\nlocal x = l.ans<??>wer()")?;
+        let direct_value = hover_markup(&mut ws, "local x = my_lib.ans<??>wer()")?;
+        verify_that!(
+            alias_value,
+            starts_with("```lua\nfunction my_lib.answer() -> integer")
+        )?;
+        verify_eq!(alias_value, direct_value)
+    }
 }

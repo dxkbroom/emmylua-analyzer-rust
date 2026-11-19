@@ -373,6 +373,70 @@ impl<'db> SemanticModel<'db> {
             .find_visible_decl_before_offset(&name_use.name, offset)
             .map(|decl| decl.id.clone())
     }
+    /// Global declaration aliased by a local (`local m = math`, possibly chained through
+    /// other plain locals), when the local still holds that value (`current_ty`).
+    ///
+    /// Members of global tables written as `function math.floor` live under
+    /// `Name("math")`, so a local alias must look there too. Only locals without
+    /// `---@type` whose initializer is a bare name qualify, and `current_ty` must equal
+    /// the global's type, so a reassigned local (`local s = string; s = {}`) does not
+    /// pick up the global's members. Returns the global's `Decl`.
+    pub(crate) fn local_alias_global_owner(
+        &self,
+        decl: &SemanticId,
+        current_ty: &LuaType,
+    ) -> Option<SemanticId> {
+        if !matches!(decl, SemanticId::Decl(_)) {
+            return None;
+        }
+        let mut visited = Vec::new();
+        let mut current = decl.clone();
+        let global_name = loop {
+            if visited.contains(&current) || visited.len() > 16 {
+                return None;
+            }
+            visited.push(current.clone());
+            let SemanticId::Decl(key) = &current else {
+                return None;
+            };
+            let facts = self.file_facts_of(key.file_id)?;
+            let info = facts.decl_by_id(&current)?;
+            match info.kind {
+                DeclKind::Global if &current != decl => break info.name.clone(),
+                DeclKind::Local { is_iter: false, .. }
+                    if info.doc_type_syntax.is_none() && info.module_path.is_none() =>
+                {
+                    let value_syntax = info.value_expr_syntax?;
+                    let tree = self.syntax_tree_of(key.file_id)?;
+                    let node = value_syntax.to_node_from_root(&tree.get_red_root())?;
+                    let LuaExpr::NameExpr(name_expr) = LuaExpr::cast(node)? else {
+                        return None;
+                    };
+                    let resolved = if key.file_id == self.view.file_id() {
+                        self.resolve_name(name_expr.get_position())
+                    } else {
+                        None
+                    };
+                    match resolved {
+                        Some(next) => current = next,
+                        None if key.file_id == self.view.file_id() => {
+                            break SmolStr::new(name_expr.get_name_text()?);
+                        }
+                        None => return None,
+                    }
+                }
+                _ => return None,
+            }
+        };
+        // The value read here must still be the global table: a reassigned local
+        // (`s = {}`) has a different type at this point.
+        let global = self.global_decl(global_name.as_str())?;
+        let global_ty = self.type_of_decl(&global)?;
+        if matches!(global_ty, LuaType::Unknown) || &global_ty != current_ty {
+            return None;
+        }
+        Some(global)
+    }
     /// Workspace global declaration (cross-file). The `Decl` key carries the declaring file.
     pub fn global_decl(&self, name: &str) -> Option<SemanticId> {
         self.analysis().global_decl(name)
@@ -1309,6 +1373,30 @@ impl<'db> SemanticModel<'db> {
         {
             cross_owners.push(module_owner.clone());
         }
+        // `local m = math; m.floor`: the local aliases a global table, so read the
+        // members through the global's receiver path exactly like `math.floor` does.
+        // The flow type of the prefix (not its declared type) tells whether the local
+        // still holds the global table here.
+        let alias_receiver = if member_use.has_direct_owner()
+            && matches!(owner, SemanticId::Decl(_))
+            && let Some(prefix @ LuaExpr::NameExpr(_)) = index_expr.get_prefix_expr()
+            && let Some(global_owner) =
+                self.local_alias_global_owner(&owner, &self.type_of_expr(prefix.get_syntax_id()))
+        {
+            let name = match &global_owner {
+                SemanticId::Decl(key) => self
+                    .file_facts_of(key.file_id)
+                    .and_then(|facts| facts.decl_by_id(&global_owner))
+                    .map(|decl| decl.name.clone()),
+                _ => None,
+            };
+            name.map(|name| AccessPath {
+                root: SemanticId::name(name),
+                keys: Vec::new(),
+            })
+        } else {
+            None
+        };
         // Explicit, deterministic preference order (replaces the previous
         // numeric score). The key is intentionally orderable, not weighted:
         //   1. non-resolved owners before the raw owner (`old_owner`);
@@ -1329,7 +1417,7 @@ impl<'db> SemanticModel<'db> {
                 best = Some((key, member.clone()));
             }
         };
-        if let Some(receiver) = &member_use.receiver {
+        for receiver in member_use.receiver.iter().chain(alias_receiver.iter()) {
             for member in self
                 .members_of_receiver_key(receiver, &member_use.key)
                 .iter()

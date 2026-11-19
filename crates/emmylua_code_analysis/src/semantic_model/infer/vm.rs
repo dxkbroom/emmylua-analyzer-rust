@@ -1084,34 +1084,49 @@ impl<'a> InferVm<'a> {
         {
             owners.push(owner_id.clone());
         }
-        // Runtime members of global declarations are collected under the `Name(path)` key
-        // (`math.min`); even when the declaration is associated with `---@class mathlib`,
-        // the Name identity must be retained.
-        if let Some(SemanticId::Decl(decl_key)) = &owner.owner
-            && let Some(facts) = self.model.file_facts_of(decl_key.file_id)
-            && let Some(decl) = facts.decl_by_id(&SemanticId::Decl(decl_key.clone()))
-            && matches!(decl.kind, DeclKind::Global)
+        // `local m = math`: a local that only aliases a global table keeps the global's
+        // runtime identity, so members declared as `function math.floor` stay reachable
+        // through `m.floor` (and the `---@class mathlib` association below applies).
+        let mut decl_owners: Vec<SemanticId> = owner.owner.iter().cloned().collect();
+        if let Some(decl) = &owner.owner
+            && let Some(global_owner) = self.model.local_alias_global_owner(decl, &owner.ty)
+            && !decl_owners.contains(&global_owner)
         {
-            let name_owner = SemanticId::Name(decl.name.clone().into());
-            if !owners.contains(&name_owner) {
-                owners.push(name_owner);
+            if !owners.contains(&global_owner) {
+                owners.push(global_owner.clone());
             }
+            decl_owners.push(global_owner);
         }
-        // `local x = {}` associated with `---@class MyClass`: also add the class def as a
-        // member candidate so `@field` typed members (e.g. `unpack` overloads) are
-        // reachable through the table identity. The runtime table and class name may differ;
-        // only the annotation and declaration need to share the same owner_syntax.
-        if let Some(SemanticId::Decl(decl_key)) = &owner.owner
-            && let Some(facts) = self.model.file_facts_of(decl_key.file_id)
-            && let Some(decl) = facts.decl_by_id(&SemanticId::Decl(decl_key.clone()))
-            && let Some(owner_syntax) = decl.owner_syntax
-            && let Some(def) = facts
-                .type_def_by_owner_syntax(owner_syntax)
-                .filter(|def| matches!(def.kind, TypeDefKind::Class | TypeDefKind::Enum))
-        {
-            let type_def_id = def.id.clone();
-            if !owners.contains(&type_def_id) {
-                owners.push(type_def_id);
+        for decl_owner in &decl_owners {
+            // Runtime members of global declarations are collected under the `Name(path)` key
+            // (`math.min`); even when the declaration is associated with `---@class mathlib`,
+            // the Name identity must be retained.
+            if let SemanticId::Decl(decl_key) = decl_owner
+                && let Some(facts) = self.model.file_facts_of(decl_key.file_id)
+                && let Some(decl) = facts.decl_by_id(decl_owner)
+                && matches!(decl.kind, DeclKind::Global)
+            {
+                let name_owner = SemanticId::Name(decl.name.clone().into());
+                if !owners.contains(&name_owner) {
+                    owners.push(name_owner);
+                }
+            }
+            // `local x = {}` associated with `---@class MyClass`: also add the class def as a
+            // member candidate so `@field` typed members (e.g. `unpack` overloads) are
+            // reachable through the table identity. The runtime table and class name may
+            // differ; only the annotation and declaration need to share the same owner_syntax.
+            if let SemanticId::Decl(decl_key) = decl_owner
+                && let Some(facts) = self.model.file_facts_of(decl_key.file_id)
+                && let Some(decl) = facts.decl_by_id(decl_owner)
+                && let Some(owner_syntax) = decl.owner_syntax
+                && let Some(def) = facts
+                    .type_def_by_owner_syntax(owner_syntax)
+                    .filter(|def| matches!(def.kind, TypeDefKind::Class | TypeDefKind::Enum))
+            {
+                let type_def_id = def.id.clone();
+                if !owners.contains(&type_def_id) {
+                    owners.push(type_def_id);
+                }
             }
         }
         // When a global class table is written directly as
