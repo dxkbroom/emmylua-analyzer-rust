@@ -42,7 +42,7 @@ use super::SemanticModel;
 use super::cache::{self, DeclTracePurpose};
 use super::member::find_self_return_cast_member;
 use crate::semantic_model::infer::infer_call_with_bindings;
-use crate::semantic_model::infer::unify::substitute;
+use crate::semantic_model::infer::return_overload::{ReturnOverloadRow, return_overload_rows};
 use crate::semantic_model::infer::vm::{binary_type, widen_const};
 use crate::signature::LuaSignatureId;
 use guards::{guarded_on_all_paths, literal_comparison, normalize_condition, unparenthesized};
@@ -3691,11 +3691,7 @@ fn correlated_narrowing_for_condition(
         flow_metrics::record_correlated_row_work(rows.rows.len() as u64);
         let disc_call_id = disc_ref.call_expr.get_syntax_id();
         // The discriminant variable's base type is the union of discriminant slots across all return_overload rows of that call.
-        let disc_base = rows
-            .raw_slot_unions
-            .get(disc_ref.return_index)
-            .cloned()
-            .unwrap_or(LuaType::Nil);
+        let disc_base = rows.slot_union(disc_ref.return_index);
         let disc_narrowed = apply_narrowing(model, disc_base, &disc_narrowing);
         for target_ref in &target_refs {
             if target_ref.call_expr.get_syntax_id() != disc_call_id {
@@ -3703,16 +3699,10 @@ fn correlated_narrowing_for_condition(
             }
             let mut matching_rows = Vec::new();
             for (row_index, row) in rows.rows.iter().enumerate() {
-                let disc_slot = row
-                    .get(disc_ref.return_index)
-                    .cloned()
-                    .unwrap_or(LuaType::Nil);
-                let target_slot = row
-                    .get(target_ref.return_index)
-                    .cloned()
-                    .unwrap_or(LuaType::Nil);
-                // For a variable return slot like `R...` assigned to a single variable, use the base slot type.
-                let target_slot = target_slot.get_result_slot_type(0).unwrap_or(LuaType::Nil);
+                let disc_slot = row.slot(disc_ref.return_index);
+                // Rows are spread, so a slot past a `T...` value reads the
+                // bound value (or the unbounded tail) instead of `nil`.
+                let target_slot = row.slot(target_ref.return_index);
                 if types_may_overlap(disc_slot.clone(), disc_narrowed.clone()) {
                     matching_rows.push((row_index, target_slot));
                 }
@@ -3721,11 +3711,7 @@ fn correlated_narrowing_for_condition(
                 call: disc_call_id,
                 return_index: target_ref.return_index,
                 rows: matching_rows,
-                candidates: rows
-                    .value_slot_unions
-                    .get(target_ref.return_index)
-                    .cloned()
-                    .unwrap_or(LuaType::Nil),
+                candidates: rows.slot_union(target_ref.return_index),
             };
             if !constraints.contains(&constraint) {
                 constraints.push(constraint);
@@ -4095,12 +4081,19 @@ fn widen_const_type(ty: LuaType) -> LuaType {
     }
 }
 
-/// Instantiated rows and their column unions, shared by all guards for a call.
+/// Instantiated rows (variadics spread, see `ReturnOverloadRow`), shared by all
+/// guards for a call. Built by the same function as the call's inferred
+/// result types, so a narrowed row never leaves part of the declared type
+/// unexplained.
 pub(super) struct ReturnOverloadRows {
-    rows: Vec<Vec<LuaType>>,
-    raw_slot_unions: Vec<LuaType>,
-    /// A variadic return assigned to one variable contributes its first value.
-    value_slot_unions: Vec<LuaType>,
+    rows: Vec<ReturnOverloadRow>,
+}
+
+impl ReturnOverloadRows {
+    /// Union of result `index` across all rows.
+    fn slot_union(&self, index: usize) -> LuaType {
+        LuaType::from_vec(self.rows.iter().map(|row| row.slot(index)).collect())
+    }
 }
 
 fn return_overload_rows_for_call(
@@ -4121,38 +4114,8 @@ fn return_overload_rows_for_call(
         .borrow_mut()
         .return_overload_rows
         .insert(key, cache::CacheEntry::InProgress);
-    let result = return_overload_rows_for_call_uncached(model, call_ptr).map(|rows| {
-        let mut columns: Vec<Vec<LuaType>> = Vec::new();
-        for (row_index, row) in rows.iter().enumerate() {
-            columns.resize_with(columns.len().max(row.len()), Vec::new);
-            for (column, slot) in columns.iter_mut().zip(row) {
-                // Fill a gap before the next value to preserve union member order.
-                if column.len() < row_index {
-                    column.push(LuaType::Nil);
-                }
-                column.push(slot.clone());
-            }
-        }
-        let mut raw_slot_unions = Vec::with_capacity(columns.len());
-        let mut value_slot_unions = Vec::with_capacity(columns.len());
-        for mut slots in columns {
-            if slots.len() < rows.len() {
-                slots.push(LuaType::Nil);
-            }
-            value_slot_unions.push(LuaType::from_vec(
-                slots
-                    .iter()
-                    .map(|slot| slot.get_result_slot_type(0).unwrap_or(LuaType::Nil))
-                    .collect(),
-            ));
-            raw_slot_unions.push(LuaType::from_vec(slots));
-        }
-        Rc::new(ReturnOverloadRows {
-            rows,
-            raw_slot_unions,
-            value_slot_unions,
-        })
-    });
+    let result = return_overload_rows_for_call_uncached(model, call_ptr)
+        .map(|rows| Rc::new(ReturnOverloadRows { rows }));
     let mut cache = model.cache.borrow_mut();
     let entry = cache::CacheEntry::finish(result.clone(), cache.is_complete(revision));
     cache.return_overload_rows.insert(key, entry);
@@ -4162,7 +4125,7 @@ fn return_overload_rows_for_call(
 fn return_overload_rows_for_call_uncached(
     model: &SemanticModel,
     call_ptr: &emmylua_parser::LuaAstPtr<emmylua_parser::LuaCallExpr>,
-) -> Option<Vec<Vec<LuaType>>> {
+) -> Option<Vec<ReturnOverloadRow>> {
     let chunk = model.chunk()?;
     let call = call_ptr.to_node(&chunk)?;
     let (file_id, closure_syntax) = resolve_callee_closure(model, &call)?;
@@ -4173,42 +4136,17 @@ fn return_overload_rows_for_call_uncached(
         return None;
     }
 
-    let mut rows: Vec<Vec<LuaType>> = Vec::new();
-    let mut index = 0;
-    for &len in &docs.return_overload_rows {
-        let end = (index + len).min(docs.return_overloads.len());
-        rows.push(
-            docs.return_overloads[index..end]
-                .iter()
-                .map(|(_, syntax)| model.doc_type_lua_in(file_id, *syntax, &docs.generic_params))
-                .collect(),
-        );
-        index = end;
-    }
-
-    // Generic rows: infer bindings from call-site arguments and substitute them to get instantiated return_overload rows.
+    // Generic rows: bind the generics from the call-site arguments, exactly as
+    // the call's result types are inferred.
+    let scope = model.doc_type_scope(file_id, &docs.generic_params);
+    let bindings = if docs.generic_params.is_empty() {
+        None
+    } else {
+        infer_call_with_bindings(model, call.get_syntax_id()).map(|(_, bindings)| bindings)
+    };
+    let rows = return_overload_rows(model, docs, &scope, bindings.as_ref());
     #[cfg(test)]
     flow_metrics::record_return_rows_built(rows.len() as u64);
-    if rows.iter().any(|row| row.iter().any(|ty| ty.contain_tpl()))
-        && let Some((_, bindings)) = infer_call_with_bindings(model, call.get_syntax_id())
-    {
-        let instantiated = rows
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|raw_ty| {
-                        if raw_ty.contain_tpl() {
-                            widen_const_type(substitute(raw_ty, &bindings))
-                        } else {
-                            raw_ty.clone()
-                        }
-                    })
-                    .collect()
-            })
-            .collect();
-        return Some(instantiated);
-    }
-
     Some(rows)
 }
 

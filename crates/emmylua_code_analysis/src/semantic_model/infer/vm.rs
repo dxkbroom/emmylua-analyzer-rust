@@ -2778,51 +2778,11 @@ impl<'a> InferVm<'a> {
             return self.return_types_lua(&docs.returns, scope);
         }
 
-        fn flatten_row_types(
-            types: &[LuaType],
-            fixed: &mut Vec<LuaType>,
-            tail: &mut Option<LuaType>,
-        ) {
-            for ty in types {
-                match ty {
-                    LuaType::Variadic(variadic) => match variadic.as_ref() {
-                        VariadicType::Base(base) | VariadicType::Repeat(base) => {
-                            if tail.is_none() {
-                                *tail = Some(base.clone());
-                            }
-                        }
-                        VariadicType::Multi(inner_types) => {
-                            flatten_row_types(inner_types, fixed, tail);
-                        }
-                    },
-                    _ => fixed.push(ty.clone()),
-                }
-            }
-        }
-
-        let mut rows: Vec<Vec<LuaType>> = Vec::new();
-        let mut row_tails: Vec<Option<LuaType>> = Vec::new();
-        let mut index = 0;
-        for &len in &docs.return_overload_rows {
-            let end = (index + len).min(docs.return_overloads.len());
-            let raw_row: Vec<LuaType> = docs.return_overloads[index..end]
-                .iter()
-                .map(|(_, syntax)| {
-                    let ty = self.model.project_doc_type_in_scope(*syntax, scope);
-                    if let Some(bindings) = bindings {
-                        unify::substitute(&ty, bindings)
-                    } else {
-                        ty
-                    }
-                })
-                .collect();
-            let mut fixed = Vec::new();
-            let mut tail = None;
-            flatten_row_types(&raw_row, &mut fixed, &mut tail);
-            rows.push(fixed);
-            row_tails.push(tail);
-            index = end;
-        }
+        let (rows, row_tails): (Vec<Vec<LuaType>>, Vec<Option<LuaType>>) =
+            super::return_overload::return_overload_rows(self.model, docs, scope, bindings)
+                .into_iter()
+                .map(|row| (row.fixed, row.tail))
+                .unzip();
 
         let main_types: Vec<LuaType> = docs
             .returns
@@ -2844,11 +2804,9 @@ impl<'a> InferVm<'a> {
         let mut all_rows = rows.clone();
         let mut all_tails = row_tails.clone();
         if !use_prefix && !main_types.is_empty() {
-            let mut fixed = Vec::new();
-            let mut tail = None;
-            flatten_row_types(&main_types, &mut fixed, &mut tail);
-            all_rows.insert(0, fixed);
-            all_tails.insert(0, tail);
+            let main_row = super::return_overload::ReturnOverloadRow::from_types(&main_types);
+            all_rows.insert(0, main_row.fixed);
+            all_tails.insert(0, main_row.tail);
         }
         let has_variadic = all_tails.iter().any(|tail| tail.is_some());
 

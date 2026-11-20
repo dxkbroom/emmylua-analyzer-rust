@@ -33,6 +33,7 @@ mod pcall_test;
 mod return_overload_flow_test;
 mod return_overload_generic_test;
 mod return_overload_member_test;
+mod return_overload_variadic_flow_test;
 mod return_unwrap_test;
 mod semantic_generic_test;
 mod semantic_infer_test;
