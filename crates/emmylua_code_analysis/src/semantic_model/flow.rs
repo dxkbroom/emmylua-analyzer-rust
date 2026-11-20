@@ -3491,6 +3491,42 @@ fn resolve_callable_closure(
     }
 }
 
+/// Resolve the closure a call goes to: a local or global name (following alias
+/// chains), or a member such as `M.f` / `obj:f`, including a member declared in
+/// another file (`local async = require("luastd.async")`; `async.try_await(d)`).
+fn resolve_callee_closure(
+    model: &SemanticModel,
+    call: &emmylua_parser::LuaCallExpr,
+) -> Option<(FileId, emmylua_parser::LuaSyntaxId)> {
+    match call.get_prefix_expr()? {
+        LuaExpr::NameExpr(callee_name) => {
+            let decl = model.resolve_name(callee_name.get_position())?;
+            resolve_callable_closure(model, decl)
+        }
+        LuaExpr::IndexExpr(index_expr) => {
+            let member_id = model.resolve_member(&index_expr)?.member_id?;
+            let SemanticId::Member(key) = &member_id else {
+                return None;
+            };
+            let member_file = key.file_id;
+            let member = model.file_facts_of(member_file)?.member_by_id(&member_id)?;
+            let value_syntax = member.value_syntax?;
+            let tree = model.syntax_tree_of(member_file)?;
+            let node = value_syntax.to_node_from_root(&tree.get_red_root())?;
+            match LuaExpr::cast(node)? {
+                LuaExpr::ClosureExpr(_) => Some((member_file, value_syntax)),
+                // `M.f = local_fn`: follow the local alias chain.
+                LuaExpr::NameExpr(name_expr) if member_file == model.file_id() => {
+                    let decl = model.resolve_name(name_expr.get_position())?;
+                    resolve_callable_closure(model, decl)
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 /// Original signature at the call site (already followed through alias chains).
 fn call_signature(
     model: &SemanticModel,
@@ -4129,11 +4165,7 @@ fn return_overload_rows_for_call_uncached(
 ) -> Option<Vec<Vec<LuaType>>> {
     let chunk = model.chunk()?;
     let call = call_ptr.to_node(&chunk)?;
-    let LuaExpr::NameExpr(callee_name) = call.get_prefix_expr()? else {
-        return None;
-    };
-    let decl = model.resolve_name(callee_name.get_position())?;
-    let (file_id, closure_syntax) = resolve_callable_closure(model, decl)?;
+    let (file_id, closure_syntax) = resolve_callee_closure(model, &call)?;
     let facts = model.file_facts_of(file_id)?;
     let signature = facts.signature_by_closure(closure_syntax)?;
     let docs = signature.docs.as_ref()?;
