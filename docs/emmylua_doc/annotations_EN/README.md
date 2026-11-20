@@ -33,6 +33,7 @@ The following notation symbols are used in annotation syntax descriptions:
 - [`@overload`](./overload.md) - Function overload
 - [`@async`](./async.md) - Async function marker
 - [`@nodiscard`](./nodiscard.md) - Non-discardable return value
+- [`@assert`](./assert.md) - Assertion function (narrows an argument after the call)
 
 ### Type Operations
 - [`@cast`](./cast.md) - Type casting
@@ -128,6 +129,7 @@ end
 | `@return_overload` | Correlated return tuples | `---@return_overload true, T` |
 | `@type` | Type declaration | `---@type string` |
 | `@generic` | Generic definition | `---@generic T` |
+| `@assert` | Assertion function | `---@assert value -?` |
 | `@overload` | Function overload | `---@overload fun(x: number): number` |
 | `@deprecated` | Deprecation marker | `---@deprecated Use new method instead` |
 | `@cast` | Type casting | `---@cast value string` |

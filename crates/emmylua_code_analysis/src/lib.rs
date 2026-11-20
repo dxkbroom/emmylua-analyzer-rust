@@ -23,8 +23,8 @@ pub use crate::semantic_db::def::ModuleVisibility;
 /// Public types for the semantic layer.
 pub use crate::semantic_db::def::{
     Decl, DeclKind, DocGenericParam, ExportKey, LuaMemberKey, Member, MemberRef, ModuleExport,
-    OwnerId, SemanticId, Signature, SignatureDoc, SignatureReturnCast, TypeDef, TypeDefKind,
-    TypeScope, TypeVisibility,
+    OwnerId, SemanticId, Signature, SignatureAssert, SignatureAssertKind, SignatureDoc,
+    SignatureReturnCast, TypeDef, TypeDefKind, TypeScope, TypeVisibility,
 };
 pub use crate::semantic_db::exports::{
     FileExportContribution, FileExports, GlobalExport, MemberExport,

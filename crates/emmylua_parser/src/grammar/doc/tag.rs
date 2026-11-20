@@ -41,6 +41,7 @@ fn parse_tag_detail(p: &mut LuaDocParser) -> DocParseResult {
         LuaTokenKind::TkTagReturn => parse_tag_return(p),
         LuaTokenKind::TkTagReturnOverload => parse_tag_return_overload(p),
         LuaTokenKind::TkTagReturnCast => parse_tag_return_cast(p),
+        LuaTokenKind::TkTagAssert => parse_tag_assert(p),
         // other tag
         LuaTokenKind::TkTagModule => parse_tag_module(p),
         LuaTokenKind::TkTagSee => parse_tag_see(p),
@@ -426,6 +427,34 @@ fn parse_tag_return_cast(p: &mut LuaDocParser) -> DocParseResult {
     // Allow optional second type after 'else' for false condition
     if p.current_token() == LuaTokenKind::TkDocElse {
         p.bump();
+        parse_op_type(p)?;
+    }
+
+    p.set_lexer_state(LuaDocLexerState::Description);
+    parse_description(p);
+    Ok(m.complete(p))
+}
+
+// ---@assert <param name>
+// ---@assert <param name> <type>
+// ---@assert <param name> -?
+fn parse_tag_assert(p: &mut LuaDocParser) -> DocParseResult {
+    p.set_lexer_state(LuaDocLexerState::Normal);
+    let m = p.mark(LuaSyntaxKind::DocTagAssert);
+    p.bump();
+    expect_token(p, LuaTokenKind::TkName)?;
+
+    // The type is optional: the bare form ends the line (or starts a description).
+    if !matches!(
+        p.current_token(),
+        LuaTokenKind::TkEof
+            | LuaTokenKind::TkEndOfLine
+            | LuaTokenKind::TkDocDetail
+            | LuaTokenKind::TkDocStart
+            | LuaTokenKind::TkDocLongStart
+            | LuaTokenKind::TkDocContinue
+            | LuaTokenKind::TkNormalStart
+    ) {
         parse_op_type(p)?;
     }
 

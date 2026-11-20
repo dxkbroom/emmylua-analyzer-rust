@@ -211,6 +211,7 @@ fn build_tokens_semantic_token(
         | LuaTokenKind::TkTagSource
         | LuaTokenKind::TkTagReturnCast
         | LuaTokenKind::TkTagReturnOverload
+        | LuaTokenKind::TkTagAssert
         | LuaTokenKind::TkLanguage
         | LuaTokenKind::TKTagSchema => {
             builder.push_with_modifier(

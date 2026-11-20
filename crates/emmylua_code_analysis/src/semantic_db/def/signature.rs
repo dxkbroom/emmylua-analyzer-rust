@@ -81,6 +81,25 @@ pub struct SignatureReturnCast {
     pub fallback: Option<LuaSyntaxId>,
 }
 
+/// `---@assert name [Type | -?]`: what a call statement guarantees about an
+/// argument once it returns (TypeScript `asserts name` / `asserts name is Type`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SignatureAssert {
+    /// Asserted parameter name.
+    pub name: SmolStr,
+    pub kind: SignatureAssertKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SignatureAssertKind {
+    /// `---@assert name`: the argument is truthy.
+    Truthy,
+    /// `---@assert name -?`: the argument is not nil.
+    NotNil,
+    /// `---@assert name Type`: the argument is `Type`.
+    Type(LuaSyntaxId),
+}
+
 /// Function doc annotation details (collected and merged by owner statement).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct SignatureDoc {
@@ -99,6 +118,8 @@ pub struct SignatureDoc {
     pub return_overloads: Vec<(Option<SmolStr>, LuaSyntaxId)>,
     /// `---@return_cast name Type else Fallback`.
     pub return_cast: Option<SignatureReturnCast>,
+    /// `---@assert name [Type | -?]`, in source order.
+    pub asserts: Vec<SignatureAssert>,
     /// Number of types per `---@return_overload` row (`@return true, integer` = 2).
     pub return_overload_rows: Vec<usize>,
     /// `---@overload fun(...)` type nodes.
@@ -124,6 +145,7 @@ impl SignatureDoc {
             && self.named_returns.is_empty()
             && self.return_overloads.is_empty()
             && self.return_cast.is_none()
+            && self.asserts.is_empty()
             && self.return_overload_rows.is_empty()
             && self.overloads.is_empty()
             && self.generic_params.is_empty()

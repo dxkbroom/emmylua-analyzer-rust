@@ -19,7 +19,7 @@ use smol_str::SmolStr;
 
 use crate::DiagnosticCode;
 use crate::FileId;
-use crate::semantic_db::def::SignatureReturnCast;
+use crate::semantic_db::def::{SignatureAssert, SignatureAssertKind, SignatureReturnCast};
 use crate::semantic_db::types::exact_integer;
 
 use super::index::{Bucket, build_buckets, find_bucket};
@@ -1610,6 +1610,33 @@ impl FactsBuilder {
                             name: name_token.get_name_text().into(),
                             cast: cast_type.get_syntax_id(),
                             fallback: fallback.map(|ty| ty.get_syntax_id()),
+                        });
+                    }
+                }
+                LuaDocTag::Assert(assert_tag) => {
+                    if let Some(owner_syntax) = owner_syntax {
+                        let Some(name_token) = assert_tag.get_name_token() else {
+                            continue;
+                        };
+                        let kind = match assert_tag.get_op_type() {
+                            None => SignatureAssertKind::Truthy,
+                            Some(op_type) => match (op_type.get_op(), op_type.get_type()) {
+                                (Some(op), None)
+                                    if op.get_op() == BinaryOperator::OpSub
+                                        && op_type.is_nullable() =>
+                                {
+                                    SignatureAssertKind::NotNil
+                                }
+                                (None, Some(doc_type)) => {
+                                    SignatureAssertKind::Type(doc_type.get_syntax_id())
+                                }
+                                _ => continue,
+                            },
+                        };
+                        let entry = self.signature_doc_map.entry(owner_syntax).or_default();
+                        entry.asserts.push(SignatureAssert {
+                            name: name_token.get_name_text().into(),
+                            kind,
                         });
                     }
                 }
