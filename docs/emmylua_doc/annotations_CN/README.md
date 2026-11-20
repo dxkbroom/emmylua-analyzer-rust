@@ -31,6 +31,7 @@
 - [`@overload`](./overload.md) - 函数重载
 - [`@async`](./async.md) - 异步函数标记
 - [`@nodiscard`](./nodiscard.md) - 不可忽略返回值
+- [`@assert`](./assert.md) - 断言函数（调用后收窄实参）
 
 ### 类型操作
 - [`@cast`](./cast.md) - 类型转换
@@ -126,6 +127,7 @@ end
 | `@return_overload` | 关联返回元组 | `---@return_overload true, T` |
 | `@type` | 类型声明 | `---@type string` |
 | `@generic` | 泛型定义 | `---@generic T` |
+| `@assert` | 断言函数 | `---@assert value -?` |
 | `@overload` | 函数重载 | `---@overload fun(x: number): number` |
 | `@deprecated` | 弃用标记 | `---@deprecated 请使用新方法` |
 | `@cast` | 类型转换 | `---@cast value string` |

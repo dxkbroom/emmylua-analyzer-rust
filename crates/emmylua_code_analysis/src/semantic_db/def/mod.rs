@@ -40,8 +40,8 @@ pub use render_level::RenderLevel;
 pub use scope::{Scope, ScopeChild, ScopeKind};
 pub use semantic_id::SemanticId;
 pub use signature::{
-    ConstructorAttribute, ConstructorReturnMode, LuaSignatureId, Signature, SignatureDoc,
-    SignatureReturnCast,
+    ConstructorAttribute, ConstructorReturnMode, LuaSignatureId, Signature, SignatureAssert,
+    SignatureAssertKind, SignatureDoc, SignatureReturnCast,
 };
 pub use type_def::{TypeDef, TypeDefFlags, TypeDefKind, TypeScope, TypeVisibility};
 pub use workspace_id::WorkspaceId;

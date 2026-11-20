@@ -36,6 +36,8 @@ pub struct FlowTree {
     condition_nodes: Vec<(TextSize, FlowId)>,
     /// Sorted `(cast position, flow id)` for `---@cast` / `--[[@as]]` nodes.
     cast_nodes: Vec<(TextSize, FlowId)>,
+    /// Sorted `(position, flow id)` for call statements (`---@assert` candidates).
+    call_stat_nodes: Vec<(TextSize, FlowId)>,
     /// Sorted `(position, flow id)` for nodes with a merge (`Multiple`) antecedent.
     branch_nodes: Vec<(TextSize, FlowId)>,
     /// True when a merge node has no AST range to index safely.
@@ -70,6 +72,7 @@ impl FlowTree {
         let mut decl_positions: Vec<(TextSize, FlowId)> = Vec::new();
         let mut condition_nodes: Vec<(TextSize, FlowId)> = Vec::new();
         let mut cast_nodes: Vec<(TextSize, FlowId)> = Vec::new();
+        let mut call_stat_nodes: Vec<(TextSize, FlowId)> = Vec::new();
         let mut branch_nodes: Vec<(TextSize, FlowId)> = Vec::new();
         let mut unpositioned_branch = false;
         let has_complex_control = flow_nodes.iter().any(|node| {
@@ -134,6 +137,9 @@ impl FlowTree {
                 FlowNodeKind::AsCast(as_cast) => {
                     cast_nodes.push((as_cast.get_syntax_id().get_range().start(), flow_id));
                 }
+                FlowNodeKind::CallExprStat(call) => {
+                    call_stat_nodes.push((call.get_syntax_id().get_range().start(), flow_id));
+                }
                 _ => {}
             }
         }
@@ -147,6 +153,7 @@ impl FlowTree {
         decl_positions.sort_by_key(|(pos, _)| *pos);
         condition_nodes.sort_by_key(|(pos, _)| *pos);
         cast_nodes.sort_by_key(|(pos, _)| *pos);
+        call_stat_nodes.sort_by_key(|(pos, _)| *pos);
         branch_nodes.sort_by_key(|(pos, _)| *pos);
         let has_tag_cast = !cast_nodes.is_empty();
         let mut binding_ranges: Vec<(TextRange, FlowId)> = bindings
@@ -174,6 +181,7 @@ impl FlowTree {
             decl_positions,
             condition_nodes,
             cast_nodes,
+            call_stat_nodes,
             branch_nodes,
             unpositioned_branch,
             has_complex_control,
@@ -418,6 +426,16 @@ impl FlowTree {
         has_node_between(&self.condition_nodes, start, end, include_start)
             || has_node_between(&self.cast_nodes, start, end, include_start)
             || has_node_between(&self.branch_nodes, start, end, include_start)
+    }
+
+    /// Sorted `(position, flow id)` of every call statement node.
+    pub fn call_stat_nodes(&self) -> &[(TextSize, FlowId)] {
+        &self.call_stat_nodes
+    }
+
+    /// Whether `decl` takes part in any correlated multi-return assignment.
+    pub fn has_decl_multi_return_ref(&self, decl: &SemanticId) -> bool {
+        self.decl_multi_return_ref.contains_key(decl)
     }
 
     /// Whether any assignment to `decl` occurs in the flow tree.

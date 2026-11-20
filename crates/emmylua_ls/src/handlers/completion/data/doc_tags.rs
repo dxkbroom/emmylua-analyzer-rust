@@ -30,5 +30,6 @@ pub const DOC_TAGS: &[&str] = &[
     "source",
     "readonly",
     "return_cast",
+    "assert",
     "language",
 ];

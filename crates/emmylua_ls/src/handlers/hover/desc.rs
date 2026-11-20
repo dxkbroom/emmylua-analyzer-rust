@@ -483,6 +483,7 @@ fn render_extra_tag(tag: &LuaDocTag) -> Option<String> {
             | "as"
             | "visibility"
             | "return_cast"
+            | "assert"
             | "language"
     ) {
         return None;

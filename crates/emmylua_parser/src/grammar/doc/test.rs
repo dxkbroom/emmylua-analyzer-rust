@@ -133,6 +133,57 @@ Syntax(Chunk)@0..163
     }
 
     #[test]
+    fn test_assert_tag_forms() {
+        use crate::{BinaryOperator, LuaAstNode, LuaDocTagAssert};
+
+        let code = r#"
+        ---@assert value
+        ---@assert value true
+        ---@assert value -?
+        ---@assert value string|integer # the value is a key
+        local function f(value) end
+        "#;
+        let tree = LuaParser::parse(code, ParserConfig::default());
+        assert!(tree.get_errors().is_empty(), "{:?}", tree.get_errors());
+        let tags: Vec<_> = tree
+            .get_red_root()
+            .descendants()
+            .filter_map(LuaDocTagAssert::cast)
+            .collect();
+        assert_eq!(tags.len(), 4);
+        for tag in &tags {
+            assert_eq!(tag.get_name_token().unwrap().get_name_text(), "value");
+        }
+        assert!(tags[0].get_op_type().is_none());
+        assert_eq!(
+            tags[1]
+                .get_op_type()
+                .unwrap()
+                .get_type()
+                .unwrap()
+                .syntax()
+                .text()
+                .to_string(),
+            "true"
+        );
+        let not_nil = tags[2].get_op_type().unwrap();
+        assert!(not_nil.get_type().is_none());
+        assert!(not_nil.is_nullable());
+        assert_eq!(not_nil.get_op().unwrap().get_op(), BinaryOperator::OpSub);
+        assert_eq!(
+            tags[3]
+                .get_op_type()
+                .unwrap()
+                .get_type()
+                .unwrap()
+                .syntax()
+                .text()
+                .to_string(),
+            "string|integer"
+        );
+    }
+
+    #[test]
     fn test_return_overload_tag() {
         let code = r#"
         ---@return_overload true, integer

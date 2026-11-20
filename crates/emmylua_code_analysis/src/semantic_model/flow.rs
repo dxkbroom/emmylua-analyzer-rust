@@ -115,6 +115,7 @@ fn type_of_decl_read_at(
     if let Some(decl_start) = decl_owner_syntax_start(model, decl)
         && tree.latest_decl_assignment(decl, offset).is_none()
         && !tree.has_flow_event_between(decl_start, offset, true)
+        && !assert_call_stat_between(model, &tree, decl, decl_start, offset, true)
     {
         #[cfg(test)]
         flow_metrics::record_fast_decl_hit();
@@ -2489,6 +2490,17 @@ fn trace_decl_uncached(
                     }
                     break 'trace Some(LuaType::Never);
                 }
+                // `---@assert`: once the statement returns, its argument is narrowed.
+                if matches!(
+                    purpose,
+                    DeclTracePurpose::ReadValue | DeclTracePurpose::ReadContract(_)
+                ) {
+                    for narrowing in
+                        call_stat_assert_narrowings(model, tree, decl, call_stat_ptr, current)
+                    {
+                        path.push_narrowing(narrowing);
+                    }
+                }
             }
             FlowNodeKind::DeclPosition(pos) => {
                 // Target decl's declaration statement position → initial type; if assignment frames were pushed, expand them in order.
@@ -4668,6 +4680,274 @@ fn resolve_return_cast_origin(model: &SemanticModel, start: SemanticId) -> Optio
     None
 }
 
+/// One `---@assert` guarantee of a call statement: the argument expression and
+/// what holds for it once the call returns.
+#[derive(Debug, Clone)]
+pub(crate) struct CallAssert {
+    arg: LuaExpr,
+    kind: CallAssertKind,
+}
+
+#[derive(Debug, Clone)]
+enum CallAssertKind {
+    Truthy,
+    NotNil,
+    Type(LuaType),
+}
+
+/// The `---@assert` tags of the callee of `call`, bound to the call's arguments.
+fn call_asserts(model: &SemanticModel, call: &emmylua_parser::LuaCallExpr) -> Rc<Vec<CallAssert>> {
+    let key = (model.file_id(), call.get_syntax_id());
+    if let Some(cached) = model.cache.borrow().call_asserts.get(&key) {
+        return cached.clone();
+    }
+    let revision = model.cache.borrow().revision();
+    let result = Rc::new(call_asserts_uncached(model, call).unwrap_or_default());
+    model.cache.publish_if_complete(revision, |cache| {
+        cache.call_asserts.insert(key, result.clone());
+    });
+    result
+}
+
+fn call_asserts_uncached(
+    model: &SemanticModel,
+    call: &emmylua_parser::LuaCallExpr,
+) -> Option<Vec<CallAssert>> {
+    let (file_id, closure_syntax) = resolve_callee_closure(model, call)?;
+    let facts = model.file_facts_of(file_id)?;
+    let signature = facts.signature_by_closure(closure_syntax)?;
+    let docs = signature.docs.as_ref()?;
+    if docs.asserts.is_empty() {
+        return None;
+    }
+    let args: Vec<LuaExpr> = call.get_args_list()?.get_args().collect();
+    // `function M:f(x)` called as `M.f(m, x)` passes the receiver as an argument.
+    let offset = usize::from(signature.is_method && !call.is_colon_call());
+    let mut result = Vec::new();
+    for assert in &docs.asserts {
+        let Some(index) = signature
+            .param_names
+            .iter()
+            .position(|name| name == &assert.name)
+        else {
+            continue;
+        };
+        let Some(arg) = args.get(index + offset) else {
+            continue;
+        };
+        let kind = match &assert.kind {
+            crate::SignatureAssertKind::Truthy => CallAssertKind::Truthy,
+            crate::SignatureAssertKind::NotNil => CallAssertKind::NotNil,
+            crate::SignatureAssertKind::Type(syntax) => {
+                CallAssertKind::Type(model.doc_type_lua_in(file_id, *syntax, &docs.generic_params))
+            }
+        };
+        result.push(CallAssert {
+            arg: arg.clone(),
+            kind,
+        });
+    }
+    Some(result)
+}
+
+fn call_stat_call_expr(
+    model: &SemanticModel,
+    call_stat_ptr: &emmylua_parser::LuaAstPtr<LuaCallExprStat>,
+) -> Option<emmylua_parser::LuaCallExpr> {
+    call_stat_ptr.to_node(&model.chunk()?)?.get_call_expr()
+}
+
+type CallStatEntry = (TextSize, emmylua_parser::LuaAstPtr<LuaCallExprStat>);
+
+/// Call statements of a file, indexed by the declarations they pass as
+/// bare-name arguments. Built once per file from syntax and name resolution
+/// only, so the `---@assert` checks in flow tracing stay cheap for the
+/// (vast majority of) call statements that cannot assert anything.
+#[derive(Debug, Default)]
+pub(crate) struct CallStatArgIndex {
+    /// Sorted `(call statement position, call statement)` per argument decl.
+    by_decl: hashbrown::HashMap<SemanticId, Vec<CallStatEntry>>,
+}
+
+impl CallStatArgIndex {
+    fn build(model: &SemanticModel, tree: &FlowTree) -> Self {
+        let mut index = Self::default();
+        let Some(chunk) = model.chunk() else {
+            return index;
+        };
+        for (pos, flow_id) in tree.call_stat_nodes() {
+            let Some(FlowNodeKind::CallExprStat(ptr)) =
+                tree.get_flow_node(*flow_id).map(|node| &node.kind)
+            else {
+                continue;
+            };
+            let Some(args) = ptr
+                .to_node(&chunk)
+                .and_then(|stat| stat.get_call_expr())
+                .and_then(|call| call.get_args_list())
+            else {
+                continue;
+            };
+            for arg in args.get_args() {
+                if let LuaExpr::NameExpr(name) = arg
+                    && let Some(arg_decl) = model.resolve_name(name.get_position())
+                {
+                    let entries = index.by_decl.entry(arg_decl).or_default();
+                    if entries.last().is_none_or(|(_, last)| last != ptr) {
+                        entries.push((*pos, ptr.clone()));
+                    }
+                }
+            }
+        }
+        for entries in index.by_decl.values_mut() {
+            entries.sort_by_key(|(pos, _)| *pos);
+        }
+        index
+    }
+
+    /// Entries of the argument decls whose assertion can narrow `decl`:
+    /// itself, plus flags from the same `---@return_overload` call.
+    fn related_entries<'a>(
+        &'a self,
+        tree: &'a FlowTree,
+        decl: &'a SemanticId,
+    ) -> impl Iterator<Item = &'a [CallStatEntry]> + 'a {
+        let shared = tree.has_decl_multi_return_ref(decl);
+        self.by_decl
+            .iter()
+            .filter(move |(arg_decl, _)| {
+                *arg_decl == decl || (shared && tree.has_shared_multi_return_refs(arg_decl, decl))
+            })
+            .map(|(_, entries)| entries.as_slice())
+    }
+}
+
+fn call_stat_arg_index(model: &SemanticModel, tree: &FlowTree) -> Rc<CallStatArgIndex> {
+    let key = model.file_id();
+    if let Some(cached) = model.cache.borrow().call_stat_args.get(&key) {
+        return cached.clone();
+    }
+    let index = Rc::new(CallStatArgIndex::build(model, tree));
+    model
+        .cache
+        .borrow_mut()
+        .call_stat_args
+        .insert(key, index.clone());
+    index
+}
+
+fn call_stat_asserts(
+    model: &SemanticModel,
+    call_stat_ptr: &emmylua_parser::LuaAstPtr<LuaCallExprStat>,
+) -> bool {
+    call_stat_call_expr(model, call_stat_ptr)
+        .is_some_and(|call| !call_asserts(model, &call).is_empty())
+}
+
+/// Whether a `---@assert` call statement positioned in `start..=end`
+/// (`start` excluded unless `include_start`) may narrow `decl`.
+fn assert_call_stat_between(
+    model: &SemanticModel,
+    tree: &FlowTree,
+    decl: &SemanticId,
+    start: TextSize,
+    end: TextSize,
+    include_start: bool,
+) -> bool {
+    if tree.call_stat_nodes().is_empty() || start > end {
+        return false;
+    }
+    let index = call_stat_arg_index(model, tree);
+    index.related_entries(tree, decl).any(|entries| {
+        let right = entries.partition_point(|(pos, _)| *pos <= end);
+        let left = if include_start {
+            entries[..right].partition_point(|(pos, _)| *pos < start)
+        } else {
+            entries[..right].partition_point(|(pos, _)| *pos <= start)
+        };
+        entries[left..right]
+            .iter()
+            .any(|(_, ptr)| call_stat_asserts(model, ptr))
+    })
+}
+
+/// Whether an argument of the call statement is `decl` or a flag from the same
+/// `---@return_overload` call as `decl`, and the callee carries `---@assert`.
+fn call_stat_may_assert_decl(
+    model: &SemanticModel,
+    tree: &FlowTree,
+    decl: &SemanticId,
+    call_stat_ptr: &emmylua_parser::LuaAstPtr<LuaCallExprStat>,
+) -> bool {
+    let index = call_stat_arg_index(model, tree);
+    let pos = call_stat_ptr.get_syntax_id().get_range().start();
+    let mentions_decl = index.related_entries(tree, decl).any(|entries| {
+        let left = entries.partition_point(|(p, _)| *p < pos);
+        entries[left..]
+            .iter()
+            .take_while(|(p, _)| *p == pos)
+            .any(|(_, ptr)| ptr == call_stat_ptr)
+    });
+    mentions_decl && call_stat_asserts(model, call_stat_ptr)
+}
+
+/// Narrowings a `---@assert` call statement applies to `decl` after it returns:
+/// directly when the asserted argument is `decl`, and through correlated
+/// `---@return_overload` rows when it is a flag from the same call (so
+/// `assert.is_true(ok)` narrows the result like `if ok then`).
+fn call_stat_assert_narrowings(
+    model: &SemanticModel,
+    tree: &FlowTree,
+    decl: &SemanticId,
+    call_stat_ptr: &emmylua_parser::LuaAstPtr<LuaCallExprStat>,
+    flow_id: FlowId,
+) -> Vec<Narrowing> {
+    if !call_stat_may_assert_decl(model, tree, decl, call_stat_ptr) {
+        return Vec::new();
+    }
+    let Some(call) = call_stat_call_expr(model, call_stat_ptr) else {
+        return Vec::new();
+    };
+    let mut narrowings = Vec::new();
+    for assert in call_asserts(model, &call).iter() {
+        let LuaExpr::NameExpr(name) = &assert.arg else {
+            continue;
+        };
+        let Some(arg_decl) = model.resolve_name(name.get_position()) else {
+            continue;
+        };
+        if arg_decl == *decl {
+            narrowings.push(match &assert.kind {
+                CallAssertKind::Truthy => Narrowing::Truthy,
+                CallAssertKind::NotNil => Narrowing::NotNil,
+                CallAssertKind::Type(ty) => Narrowing::Replace(ty.clone()),
+            });
+            continue;
+        }
+        // A flag correlated with `decl`: asserting it truthy (or `true`) is the
+        // `if ok then` branch, asserting it `false`/`nil` the `else` branch.
+        let branch = match &assert.kind {
+            CallAssertKind::Truthy => Some(true),
+            CallAssertKind::Type(ty) if ty.is_always_truthy() => Some(true),
+            CallAssertKind::Type(ty) if ty.is_always_falsy() => Some(false),
+            _ => None,
+        };
+        if let Some(is_true_branch) = branch
+            && let Some(narrowing) = correlated_narrowing_for_condition(
+                model,
+                tree,
+                decl,
+                &assert.arg,
+                is_true_branch,
+                flow_id,
+            )
+        {
+            narrowings.push(narrowing);
+        }
+    }
+    narrowings
+}
+
 /// Parse `---@return_cast name Type else Fallback` at the call site.
 ///
 /// Results are cached per call syntax in the short-lived `SemanticModel`. Most calls
@@ -6030,9 +6310,11 @@ fn decl_branch_is_pure(
             }
             FlowNodeKind::CallExprStat(call_stat_ptr) => {
                 if match purpose {
-                    DeclTracePurpose::ReadValue
-                    | DeclTracePurpose::ReadContract(_)
-                    | DeclTracePurpose::AssignTarget(_) => {
+                    DeclTracePurpose::ReadValue | DeclTracePurpose::ReadContract(_) => {
+                        call_stat_returns_never(model, call_stat_ptr)
+                            || call_stat_may_assert_decl(model, tree, decl, call_stat_ptr)
+                    }
+                    DeclTracePurpose::AssignTarget(_) => {
                         call_stat_returns_never(model, call_stat_ptr)
                     }
                     DeclTracePurpose::OriginalSignatures(_) => {

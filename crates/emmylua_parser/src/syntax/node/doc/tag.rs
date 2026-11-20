@@ -44,6 +44,7 @@ pub enum LuaDocTag {
     As(LuaDocTagAs),
     Visibility(LuaDocTagVisibility),
     ReturnCast(LuaDocTagReturnCast),
+    Assert(LuaDocTagAssert),
     Language(LuaDocTagLanguage),
 }
 
@@ -79,6 +80,7 @@ impl LuaAstNode for LuaDocTag {
             LuaDocTag::As(it) => it.syntax(),
             LuaDocTag::Visibility(it) => it.syntax(),
             LuaDocTag::ReturnCast(it) => it.syntax(),
+            LuaDocTag::Assert(it) => it.syntax(),
             LuaDocTag::Language(it) => it.syntax(),
             LuaDocTag::AttributeUse(it) => it.syntax(),
         }
@@ -116,6 +118,7 @@ impl LuaAstNode for LuaDocTag {
             || kind == LuaSyntaxKind::DocTagAs
             || kind == LuaSyntaxKind::DocTagVisibility
             || kind == LuaSyntaxKind::DocTagReturnCast
+            || kind == LuaSyntaxKind::DocTagAssert
             || kind == LuaSyntaxKind::DocTagLanguage
             || kind == LuaSyntaxKind::DocTagAttributeUse
             || kind == LuaSyntaxKind::DocTagSchema
@@ -212,6 +215,9 @@ impl LuaAstNode for LuaDocTag {
             LuaSyntaxKind::DocTagReturnCast => Some(LuaDocTag::ReturnCast(
                 LuaDocTagReturnCast::cast(syntax).unwrap(),
             )),
+            LuaSyntaxKind::DocTagAssert => {
+                Some(LuaDocTag::Assert(LuaDocTagAssert::cast(syntax).unwrap()))
+            }
             LuaSyntaxKind::DocTagLanguage => Some(LuaDocTag::Language(
                 LuaDocTagLanguage::cast(syntax).unwrap(),
             )),
@@ -1579,6 +1585,47 @@ impl LuaDocTagReturnCast {
 
     pub fn get_name_token(&self) -> Option<LuaNameToken> {
         self.token()
+    }
+}
+
+/// `---@assert <param> [<op type>]`: after a call statement returns, `<param>`
+/// is truthy, of `<type>`, or (`-?`) not nil.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LuaDocTagAssert {
+    syntax: LuaSyntaxNode,
+}
+
+impl LuaAstNode for LuaDocTagAssert {
+    fn syntax(&self) -> &LuaSyntaxNode {
+        &self.syntax
+    }
+
+    fn can_cast(kind: LuaSyntaxKind) -> bool {
+        kind == LuaSyntaxKind::DocTagAssert
+    }
+
+    fn cast(syntax: LuaSyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+}
+
+impl LuaDocDescriptionOwner for LuaDocTagAssert {}
+
+impl LuaDocTagAssert {
+    pub fn get_name_token(&self) -> Option<LuaNameToken> {
+        self.token()
+    }
+
+    /// The asserted type; `None` for the bare form (truthy).
+    pub fn get_op_type(&self) -> Option<LuaDocOpType> {
+        self.child()
     }
 }
 

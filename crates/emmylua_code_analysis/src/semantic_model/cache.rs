@@ -308,6 +308,10 @@ pub(crate) struct SemanticLocalCache {
     /// repeatedly resolving callees and scanning signatures for the same call.
     pub(crate) return_cast:
         HashMap<(FileId, LuaSyntaxId), Option<(LuaExpr, LuaType, Option<LuaType>, bool)>>,
+    /// `---@assert` guarantees of a call statement, by call syntax (mostly empty).
+    pub(crate) call_asserts: HashMap<(FileId, LuaSyntaxId), Rc<Vec<super::flow::CallAssert>>>,
+    /// Call statements by the locals they pass as bare-name arguments (`---@assert` prefilter).
+    pub(crate) call_stat_args: HashMap<FileId, Rc<super::flow::CallStatArgIndex>>,
     pub(crate) callable_candidates: HashMap<(FileId, LuaSyntaxId), Vec<LuaFunctionType>>,
     pub(crate) call_site: HashMap<(FileId, LuaSyntaxId), CallSiteAnalysis>,
     pub(crate) call_site_signatures:
