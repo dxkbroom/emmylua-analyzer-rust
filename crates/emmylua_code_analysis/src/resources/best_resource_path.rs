@@ -24,6 +24,7 @@ pub fn get_best_resources_dir() -> PathBuf {
             PathBuf::from(xdg_data_home)
                 .join("emmylua_ls")
                 .join("resources")
+                .join(&cache_key)
         } else {
             // If XDG_DATA_HOME is not set, use default XDG path
             if let Ok(home) = std::env::var("HOME") {
