@@ -314,4 +314,70 @@ mod tests {
         let ty = ws.expr_ty("assert");
         assert!(ws.humanize_type(ty).contains("fun"), "std assert expected");
     }
+
+    #[test]
+    fn luassert_flat_assertions_narrow() {
+        let mut ws = workspace(Some(EmmyrcTestFramework::Busted));
+        ws.def(
+            r#"
+            ---@return integer|false|nil
+            local function maybe() end
+
+            ---@return_overload true, string
+            ---@return_overload false, integer
+            local function parse() end
+
+            local a = maybe()
+            assert.truthy(a)
+            ra = a
+
+            local b = maybe()
+            assert.is_not_nil(b)
+            rb = b
+
+            local c = maybe()
+            assert.is_nil(c)
+            rc = c
+
+            local ok, value = parse()
+            assert.is_true(ok)
+            rv = value
+
+            local ok2, value2 = parse()
+            assert.is_false(ok2)
+            rv2 = value2
+
+            local d = maybe()
+            assert.is_not.truthy(d)
+            rd = d
+
+            local e = maybe()
+            local _ = assert.truthy(e)
+            re = e
+            "#,
+        );
+        assert_eq!(ws.expr_ty("ra"), ws.ty("integer"));
+        assert_eq!(ws.expr_ty("rb"), ws.ty("integer|false"));
+        assert_eq!(ws.expr_ty("rc"), ws.ty("nil"));
+        assert_eq!(ws.expr_ty("rv"), ws.ty("string"));
+        assert_eq!(ws.expr_ty("rv2"), ws.ty("integer"));
+        // Chained forms and expression calls do not narrow.
+        assert_eq!(ws.expr_ty("rd"), ws.ty("integer|false|nil"));
+        assert_eq!(ws.expr_ty("re"), ws.ty("integer|false|nil"));
+    }
+
+    #[test]
+    fn luassert_required_module_narrows() {
+        let mut ws = workspace(Some(EmmyrcTestFramework::Luassert));
+        ws.def(
+            r#"
+            local luassert = require("luassert")
+            ---@type string?
+            local s
+            luassert.is_not_nil(s)
+            rs = s
+            "#,
+        );
+        assert_eq!(ws.expr_ty("rs"), ws.ty("string"));
+    }
 }

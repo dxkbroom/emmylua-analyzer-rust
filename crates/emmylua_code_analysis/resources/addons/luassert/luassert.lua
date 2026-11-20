@@ -4,6 +4,8 @@
 -- Assertion signatures are inlined into each field (no aliases) so hover shows them.
 -- Lua keywords (true/false/nil/function/not) can't follow a dot, so they're typed
 -- capitalized (assert.True, assert.is.Not). luassert lowercases tokens, so that works at runtime.
+-- The flat narrowing assertions (truthy/not_nil/True/False/Nil and their is_/are_/was_
+-- forms) are additionally declared as functions with `---@assert` below.
 
 -- Matcher ------------------------------------------------------------------
 
@@ -498,6 +500,131 @@
 ---@field _DESCRIPTION string
 ---@field _VERSION string
 local luassert = {}
+
+-- Narrowing assertions ----------------------------------------------------
+-- The flat assertions are real functions so `---@assert` applies: a statement
+-- call such as `assert.is_not_nil(x)` narrows `x` afterwards. Chained forms
+-- (`assert.is_not.truthy(x)`) keep the `luassert.chain` fields and do not narrow.
+
+---Fails unless `value` is truthy.
+---@param value any
+---@param message? string
+---@assert value
+function luassert.truthy(value, message) end
+
+---Fails unless `value` is truthy.
+---@param value any
+---@param message? string
+---@assert value
+function luassert.is_truthy(value, message) end
+
+---Fails unless `value` is truthy.
+---@param value any
+---@param message? string
+---@assert value
+function luassert.are_truthy(value, message) end
+
+---Fails unless `value` is truthy.
+---@param value any
+---@param message? string
+---@assert value
+function luassert.was_truthy(value, message) end
+
+---Fails unless `value` is not nil.
+---@param value any
+---@param message? string
+---@assert value -?
+function luassert.not_nil(value, message) end
+
+---Fails unless `value` is not nil.
+---@param value any
+---@param message? string
+---@assert value -?
+function luassert.is_not_nil(value, message) end
+
+---Fails unless `value` is not nil.
+---@param value any
+---@param message? string
+---@assert value -?
+function luassert.are_not_nil(value, message) end
+
+---Fails unless `value` is not nil.
+---@param value any
+---@param message? string
+---@assert value -?
+function luassert.was_not_nil(value, message) end
+
+---Fails unless `value` is true.
+---@param value any
+---@param message? string
+---@assert value true
+function luassert.True(value, message) end
+
+---Fails unless `value` is true.
+---@param value any
+---@param message? string
+---@assert value true
+function luassert.is_true(value, message) end
+
+---Fails unless `value` is true.
+---@param value any
+---@param message? string
+---@assert value true
+function luassert.are_true(value, message) end
+
+---Fails unless `value` is true.
+---@param value any
+---@param message? string
+---@assert value true
+function luassert.was_true(value, message) end
+
+---Fails unless `value` is false.
+---@param value any
+---@param message? string
+---@assert value false
+function luassert.False(value, message) end
+
+---Fails unless `value` is false.
+---@param value any
+---@param message? string
+---@assert value false
+function luassert.is_false(value, message) end
+
+---Fails unless `value` is false.
+---@param value any
+---@param message? string
+---@assert value false
+function luassert.are_false(value, message) end
+
+---Fails unless `value` is false.
+---@param value any
+---@param message? string
+---@assert value false
+function luassert.was_false(value, message) end
+
+---Fails unless `value` is nil.
+---@param value any
+---@param message? string
+---@assert value nil
+function luassert.Nil(value, message) end
+
+---Fails unless `value` is nil.
+---@param value any
+---@param message? string
+---@assert value nil
+function luassert.is_nil(value, message) end
+
+---Fails unless `value` is nil.
+---@param value any
+---@param message? string
+---@assert value nil
+function luassert.are_nil(value, message) end
+
+---Fails unless `value` is nil.
+---@param value any
+---@param message? string
+---@assert value nil
+function luassert.was_nil(value, message) end
 
 ---@class luassert.level
 ---@field level integer
