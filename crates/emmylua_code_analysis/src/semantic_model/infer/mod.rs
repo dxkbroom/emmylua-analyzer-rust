@@ -19,6 +19,7 @@
 pub(crate) mod callable;
 pub(crate) mod function_solver;
 pub(crate) mod overload;
+pub(crate) mod return_overload;
 pub(crate) mod unify;
 pub(crate) mod vm;
 
@@ -102,12 +103,57 @@ pub fn infer_call_with_bindings(
         }
     };
 
-    // Argument types.
+    // Argument types. An unannotated closure argument is only a bare `function`
+    // here; give it the callback parameter's shape with the closure's inferred
+    // returns, as call inference does, so `try(function() return 1 end)` binds
+    // the callback's return generics the same way for flow narrowing.
+    let params = callee_fun.get_params();
+    // A callback returning a bare `T` binds `T` to the closure's return as is
+    // (call inference does not widen it), so it is bound after unification.
+    let mut closure_tpl_returns = Vec::new();
     let arg_types: Vec<LuaType> = call_expr
         .get_args_list()
         .map(|list| {
             list.get_args()
-                .map(|arg| model.type_of_expr(arg.get_syntax_id()))
+                .enumerate()
+                .map(|(index, arg)| {
+                    let ty = model.type_of_expr(arg.get_syntax_id());
+                    if let emmylua_parser::LuaExpr::ClosureExpr(_) = &arg
+                        && !matches!(ty, LuaType::DocFunction(_))
+                        && let Some((_, Some(LuaType::DocFunction(param_fun)))) = params.get(index)
+                    {
+                        let mut ret = closure_return_lua(model, arg.get_syntax_id());
+                        // Call inference binds a `T...` callback return by calling the
+                        // closure, which reads each returned literal as its base type.
+                        if matches!(param_fun.get_ret(), LuaType::Variadic(_))
+                            && let LuaType::Variadic(variadic) = &ret
+                            && let VariadicType::Multi(types) = variadic.as_ref()
+                        {
+                            ret = LuaType::Variadic(Rc::new(VariadicType::Multi(
+                                types.iter().map(vm::widen_variadic_const).collect(),
+                            )));
+                        } else if matches!(param_fun.get_ret(), LuaType::Variadic(_)) {
+                            ret = vm::widen_variadic_const(&ret);
+                        }
+                        if !matches!(ret, LuaType::Unknown | LuaType::Any) {
+                            if let LuaType::TplRef(tpl) = param_fun.get_ret() {
+                                closure_tpl_returns.push((
+                                    tpl.get_tpl_id(),
+                                    ret.get_result_slot_type(0).unwrap_or(LuaType::Nil),
+                                ));
+                            }
+                            return LuaType::DocFunction(Rc::new(crate::LuaFunctionType::new(
+                                param_fun.get_async_state(),
+                                param_fun.is_colon_define(),
+                                param_fun.is_variadic(),
+                                param_fun.get_params().to_vec(),
+                                ret,
+                                None,
+                            )));
+                        }
+                    }
+                    ty
+                })
                 .collect()
         })
         .unwrap_or_default();
@@ -122,6 +168,10 @@ pub fn infer_call_with_bindings(
             // return generics.
             let _ = vm::unify_call_bindings(model, param_ty, arg, &mut bindings);
         }
+    }
+
+    for (tpl_id, ty) in closure_tpl_returns {
+        bindings.insert(tpl_id, ty);
     }
 
     // Substitute the return type.
