@@ -28,7 +28,7 @@ use crate::semantic_model::flow::{
     ExprCastMode, original_decl_signatures_at, resolve_callable_closure, type_of_expr_with_cast,
 };
 use crate::semantic_model::member::{
-    MemberInfo, table_const_class_type, table_metatable_index_info, table_metatable_type,
+    MemberInfo, metatable_type, table_const_class_type, table_metatable_index_info,
 };
 use crate::semantic_model::type_eval::{
     class_generic_map, eval_conditionals, expand_alias_generic, expand_alias_head,
@@ -2587,7 +2587,7 @@ impl<'a> InferVm<'a> {
         model: &SemanticModel,
         table: &InFiled<rowan::TextRange>,
     ) -> Option<LuaFunctionType> {
-        let metatable_ty = table_metatable_type(model, table)?;
+        let metatable_ty = metatable_type(model, None, Some(table))?;
         let call_info =
             model.member_info(&metatable_ty, &LuaMemberKey::Name(SmolStr::new("__call")))?;
         let call_file = call_info.file_id?;
