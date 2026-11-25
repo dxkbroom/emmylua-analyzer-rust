@@ -868,7 +868,7 @@ fn test_transform_emitter_infers_output_from_emitted_input() {
         ---@return Flow<T>
         function flow.from(values) end
         ---@generic U
-        ---@param fn fun(emit: fun(value: U), value: T)
+        ---@param fn async fun(emit: fun(value: U), value: T)
         ---@return Flow<U>
         function Flow:transform_latest(fn) end
         ---@overload fun(self: Flow<T>): table<integer, T>
@@ -882,8 +882,16 @@ fn test_transform_emitter_infers_output_from_emitted_input() {
             emit(value + 1)
         end)
         local result = mapped:to_list()
+        local same = source:transform_latest(function(emit, value)
+            emit(value)
+            emit(value)
+        end):to_list()
         local strings = source:transform_latest(function(emit, value)
             emit("mapped")
+        end):to_list()
+        local mixed = source:transform_latest(function(emit, value)
+            emit(value)
+            emit("aaa")
         end):to_list()
         local shadowed = source:transform_latest(function(emit, value)
             do
@@ -906,14 +914,21 @@ fn test_transform_emitter_infers_output_from_emitted_input() {
     assert!(
         matches!(mapped, Some(LuaType::Generic(ref flow))
             if flow.get_base_type_id() == LuaTypeDeclId::global("Flow")
-                && flow.get_params() == &vec![LuaType::Integer]),
+                && flow.get_params().len() == 1
+                && matches!(&flow.get_params()[0], LuaType::Union(union)
+                    if union.iter().any(|ty| *ty == LuaType::Integer)
+                        && union.iter().any(|ty| *ty == LuaType::Number))),
         "{mapped:?}"
     );
     let result = model.type_of_decl(&decl_of(&model, "result"));
     assert!(
         matches!(result, Some(LuaType::Generic(ref table))
             if table.get_base_type_id() == LuaTypeDeclId::global("table")
-                && table.get_params() == &vec![LuaType::Integer, LuaType::Integer]),
+                && table.get_params().len() == 2
+                && table.get_params()[0] == LuaType::Integer
+                && matches!(&table.get_params()[1], LuaType::Union(union)
+                    if union.iter().any(|ty| *ty == LuaType::Integer)
+                        && union.iter().any(|ty| *ty == LuaType::Number))),
         "{result:?}"
     );
     let strings = model.type_of_decl(&decl_of(&model, "strings"));
@@ -922,6 +937,24 @@ fn test_transform_emitter_infers_output_from_emitted_input() {
             if table.get_base_type_id() == LuaTypeDeclId::global("table")
                 && table.get_params() == &vec![LuaType::Integer, LuaType::String]),
         "{strings:?}"
+    );
+    let same = model.type_of_decl(&decl_of(&model, "same"));
+    assert!(
+        matches!(same, Some(LuaType::Generic(ref table))
+            if table.get_base_type_id() == LuaTypeDeclId::global("table")
+                && table.get_params() == &vec![LuaType::Integer, LuaType::Integer]),
+        "{same:?}"
+    );
+    let mixed = model.type_of_decl(&decl_of(&model, "mixed"));
+    assert!(
+        matches!(mixed, Some(LuaType::Generic(ref table))
+            if table.get_base_type_id() == LuaTypeDeclId::global("table")
+                && table.get_params().len() == 2
+                && table.get_params()[0] == LuaType::Integer
+                && matches!(&table.get_params()[1], LuaType::Union(union)
+                    if union.iter().any(|ty| *ty == LuaType::Integer || matches!(ty, LuaType::IntegerConst(_)))
+                        && union.iter().any(|ty| *ty == LuaType::String || matches!(ty, LuaType::StringConst(_))))),
+        "{mixed:?}"
     );
     let shadowed = model.type_of_decl(&decl_of(&model, "shadowed"));
     assert!(

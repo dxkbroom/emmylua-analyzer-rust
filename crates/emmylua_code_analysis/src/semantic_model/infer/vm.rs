@@ -1926,6 +1926,7 @@ impl<'a> InferVm<'a> {
                 else {
                     continue;
                 };
+                let mut emitted_types = vec![Vec::new(); emitter_fun.get_params().len()];
                 for call in closure.descendants::<LuaCallExpr>().filter(|call| {
                     call.ancestors::<LuaClosureExpr>()
                         .next()
@@ -1942,21 +1943,39 @@ impl<'a> InferVm<'a> {
                     let Some(call_args) = call.get_args_list() else {
                         continue;
                     };
-                    for (expr, (_, expected_ty)) in
-                        call_args.get_args().zip(emitter_fun.get_params().iter())
-                    {
-                        let Some(expected_ty) = expected_ty else {
-                            continue;
-                        };
+                    for (arg_index, expr) in call_args.get_args().enumerate() {
+                        if arg_index >= emitted_types.len() {
+                            break;
+                        }
                         let actual_ty = self.type_of_expr_inherit(expr.get_syntax_id());
-                        let expected_ty = unify::substitute(expected_ty, &bindings);
-                        let _ = unify_call_bindings(
-                            self.model,
-                            &expected_ty,
-                            &actual_ty,
-                            &mut bindings,
-                        );
+                        let actual_ty = widen_const(&actual_ty);
+                        if !matches!(actual_ty, LuaType::Unknown | LuaType::Any)
+                            && !emitted_types[arg_index].contains(&actual_ty)
+                        {
+                            emitted_types[arg_index].push(actual_ty);
+                        }
                     }
+                }
+                // A transform may emit values of different types. Accumulate every
+                // value for each emitter argument before binding its generic; binding
+                // one call at a time incorrectly fixed U from the first `emit(value)`.
+                for ((_, expected_ty), actual_types) in
+                    emitter_fun.get_params().iter().zip(emitted_types)
+                {
+                    let Some(expected_ty) = expected_ty else {
+                        continue;
+                    };
+                    if actual_types.is_empty() {
+                        continue;
+                    }
+                    let actual_ty = if actual_types.len() == 1 {
+                        actual_types.into_iter().next().unwrap()
+                    } else {
+                        LuaType::Union(Rc::new(LuaUnionType::from_vec(actual_types)))
+                    };
+                    let expected_ty = unify::substitute(expected_ty, &bindings);
+                    let _ =
+                        unify_call_bindings(self.model, &expected_ty, &actual_ty, &mut bindings);
                 }
             }
         }
