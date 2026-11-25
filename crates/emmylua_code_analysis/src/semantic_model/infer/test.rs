@@ -966,6 +966,66 @@ fn test_transform_emitter_infers_output_from_emitted_input() {
 }
 
 #[test]
+fn test_transform_emitter_output_inference_from_required_meta_module() {
+    let emmyrc = Arc::new(Emmyrc::default());
+    let mut db = SemanticDatabase::new();
+    db.update_config(emmyrc);
+    let flow_uri = Uri::from_str("file:///C:/ws/luastd/flow.lua").unwrap();
+    db.set_file_content(
+        &flow_uri,
+        Some(
+            r#"
+            ---@meta luastd.flow
+            ---@class luastd.flow.Flow<T = unknown>
+            local Flow = {}
+            ---@class luastd.flow
+            local flow = {}
+            ---@generic T
+            ---@param values table<integer, T>
+            ---@return luastd.flow.Flow<T>
+            function flow.from(values) end
+            ---@generic U
+            ---@param fn async fun(emit: fun(value: U), value: T)
+            ---@return luastd.flow.Flow<U>
+            function Flow:transform_latest(fn) end
+            ---@overload fun(self: luastd.flow.Flow<T>): table<integer, T>
+            ---@generic M: table<integer, T>
+            ---@param target M
+            ---@return M
+            function Flow:to_list(target) end
+            "#
+            .to_string(),
+        ),
+    );
+    let test_uri = Uri::from_str("file:///C:/ws/tests/TransformLatestTest.lua").unwrap();
+    let file_id = db.set_file_content(
+        &test_uri,
+        Some(
+            r#"
+            ---@type luastd.flow
+            local flow = require("luastd.flow")
+            local source = flow.from({1, 2, 3})
+            local transformed = source:transform_latest(function(emit, value)
+                emit("whoami")
+            end)
+            local result = transformed:to_list()
+            "#
+            .to_string(),
+        ),
+    );
+    db.update_main_root(std::path::PathBuf::from("C:/ws"));
+    let env = TestModel { db, file_id };
+    let model = env.model();
+    let result = model.type_of_decl(&decl_of(&model, "result"));
+    assert!(
+        matches!(result, Some(LuaType::Generic(ref table))
+            if table.get_base_type_id() == LuaTypeDeclId::global("table")
+                && table.get_params() == &vec![LuaType::Integer, LuaType::String]),
+        "{result:?}"
+    );
+}
+
+#[test]
 fn test_vararg_index_keys_take_the_first_value() {
     let env = model_of(
         r#"

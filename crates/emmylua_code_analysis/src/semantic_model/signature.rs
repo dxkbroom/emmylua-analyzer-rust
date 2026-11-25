@@ -1,4 +1,6 @@
-use crate::semantic_model::infer::vm::expand_callable_types_in_model;
+use crate::semantic_model::infer::vm::{
+    expand_callable_types_in_model, reassign_function_generics_to_func_ids,
+};
 use crate::semantic_model::type_check::TypeCheckFailReason;
 use crate::types::TypeCandidate;
 use crate::{IndexInfo, LuaGenericType, OperatorDef};
@@ -525,13 +527,15 @@ impl<'db> SemanticModel<'db> {
                 }
             })
             .unwrap_or(AsyncState::None);
-        Some(LuaFunctionType::new(
-            async_state,
-            signature.is_method,
-            is_variadic,
-            params,
-            ret,
-            Some(generic_params),
+        Some(reassign_function_generics_to_func_ids(
+            LuaFunctionType::new(
+                async_state,
+                signature.is_method,
+                is_variadic,
+                params,
+                ret,
+                Some(generic_params),
+            ),
         ))
     }
     /// Receiver type for member access on the implicit `self` of a method of a generic
@@ -1087,13 +1091,15 @@ impl<'db> SemanticModel<'db> {
                 }
             })
             .unwrap_or(AsyncState::None);
-        Some(LuaFunctionType::new(
-            async_state,
-            signature.is_method,
-            is_variadic,
-            params,
-            ret,
-            Some(generic_params),
+        Some(reassign_function_generics_to_func_ids(
+            LuaFunctionType::new(
+                async_state,
+                signature.is_method,
+                is_variadic,
+                params,
+                ret,
+                Some(generic_params),
+            ),
         ))
     }
     /// Signature structure of a declaration (cross-file: the `Decl` key carries file_id).
