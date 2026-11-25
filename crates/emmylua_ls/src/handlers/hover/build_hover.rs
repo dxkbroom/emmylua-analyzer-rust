@@ -7,7 +7,7 @@ use emmylua_code_analysis::{
 };
 use emmylua_parser::{
     LuaAssignStat, LuaAstNode, LuaCallExpr, LuaDocAttributeUse, LuaDocDescriptionOwner, LuaDocType,
-    LuaExpr, LuaIndexExpr, LuaLocalStat, LuaSyntaxToken, LuaTableExpr, LuaTableField,
+    LuaExpr, LuaIndexExpr, LuaIndexKey, LuaLocalStat, LuaSyntaxToken, LuaTableExpr, LuaTableField,
 };
 use hashbrown::HashMap;
 use lsp_types::{Hover, HoverContents, MarkupContent};
@@ -55,6 +55,11 @@ pub fn build_semantic_info_hover(
     range: TextRange,
 ) -> Option<Hover> {
     let info = model.semantic_info(token.clone().into())?;
+    let fallback_member = if !matches!(info.decl, Some(SemanticId::Member(_))) {
+        member_definition_at_token(model, &token)
+    } else {
+        None
+    };
     let member_call_typ = if matches!(info.decl, Some(SemanticId::Member(_))) {
         let in_call = token
             .parent_ancestors()
@@ -104,7 +109,18 @@ pub fn build_semantic_info_hover(
         .as_ref()
         .map(|decl| member_context_infos(model, decl, &token))
         .unwrap_or_default();
-    let (mut code, description) = if let Some(decl) = info.decl.as_ref() {
+    let (mut code, description) = if let Some(SemanticId::Member(member)) = fallback_member {
+        // If semantic lookup found only a declaration from the surrounding
+        // expression, prefer the receiver's concrete member definition.
+        let member_id = SemanticId::Member(member);
+        if let Some(origin_model) =
+            semantic_id_file(&member_id).map(|file_id| model.model_for(file_id))
+        {
+            build_member_hover(&origin_model, &info.typ, &member_id, true, &[])
+        } else {
+            build_member_hover(model, &info.typ, &member_id, true, &[])
+        }
+    } else if let Some(decl) = info.decl.as_ref() {
         // Alias tracing: `local f = t.func` / `local a = b` show the signature and comments of the real function definition.
         let origin = resolve_alias_origin(model, decl).unwrap_or_else(|| decl.clone());
         if let Some(origin_model) =
@@ -167,7 +183,6 @@ pub fn build_semantic_info_hover(
     } else {
         (humanize(model, &info.typ), None)
     };
-
     // `pcall(foo)` synthesizes the full display from the call-site callback signature (covering std's anonymous `...` signature).
     let is_pcall_hover = build_pcall_hover_code(model, &token).is_some();
     if let Some(pcall_code) = build_pcall_hover_code(model, &token) {
@@ -559,6 +574,30 @@ fn member_prefix_is_generic_instance(model: &SemanticModel<'_>, token: &LuaSynta
 }
 
 /// Generic-projected member type for the member access (`x.foo` / `x:foo`) containing the current token.
+fn member_definition_at_token(
+    model: &SemanticModel<'_>,
+    token: &LuaSyntaxToken,
+) -> Option<SemanticId> {
+    let index_expr = token.parent_ancestors().find_map(LuaIndexExpr::cast)?;
+    let LuaIndexKey::Name(name) = index_expr.get_index_key()? else {
+        return None;
+    };
+    if name.get_name_text() != token.text() {
+        return None;
+    }
+    let prefix = index_expr.get_prefix_expr()?;
+    let prefix_type = model.type_of_expr(prefix.get_syntax_id());
+    let key = LuaMemberKey::Name(name.get_name_text().into());
+    model
+        .member_infos_with_key_mode(&prefix_type, &key, MemberCollectMode::AllDefinitions)
+        .into_iter()
+        .find_map(|info| {
+            (matches!(info.typ, LuaType::DocFunction(_)))
+                .then_some(info.id)
+                .flatten()
+        })
+}
+
 fn member_type_at_token(model: &SemanticModel<'_>, token: &LuaSyntaxToken) -> Option<LuaType> {
     let index_expr = token.parent_ancestors().find_map(LuaIndexExpr::cast)?;
     let prefix = index_expr.get_prefix_expr()?;

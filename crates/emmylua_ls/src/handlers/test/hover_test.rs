@@ -2,8 +2,56 @@
 mod tests {
     use crate::handlers::hover::hover;
     use crate::handlers::test_lib::{ProviderVirtualWorkspace, VirtualHoverResult, check};
+    use emmylua_code_analysis::WorkspaceFolder;
     use googletest::prelude::*;
     use lsp_types::HoverContents;
+
+    #[gtest]
+    fn test_hover_external_generic_method_description() -> Result<()> {
+        let mut ws = ProviderVirtualWorkspace::new_with_init_std_lib();
+        ws.analysis.add_library_workspace(&WorkspaceFolder::new(
+            ws.virtual_url_generator.new_path("definitions"),
+            true,
+        ));
+        ws.def_file(
+            "definitions/luastd/flow.lua",
+            r#"
+                ---@meta luastd.flow
+                ---@class luastd.flow.Flow<T>
+                local Flow = {}
+
+                ---@class luastd.flow
+                local flow = {}
+
+                ---Build a flow from values.
+                ---@generic T
+                ---@param values T[]
+                ---@return luastd.flow.Flow<T>
+                function flow.from(values) end
+
+                ---Transform with cancellation of the previous transform.
+                ---@generic U
+                ---@param fn async fun(emit: fun(value: U), value: T)
+                ---@return luastd.flow.Flow<U>
+                function Flow:transform_latest(fn) end
+            "#,
+        );
+
+        check!(ws.check_hover(
+            r#"
+                ---@type luastd.flow
+                local flow = require("luastd.flow")
+                local source = flow.from({ 1, 2, 3 })
+                source:trans<??>form_latest(function(emit, value)
+                    emit("changed")
+                end)
+            "#,
+            VirtualHoverResult {
+                value: "```lua\n(method) Flow:transform_latest(fn: async fun(emit: fun(value: U), value: integer)) -> luastd.flow.Flow<U>\n```\n\n---\n\nTransform with cancellation of the previous transform.".to_string(),
+            },
+        ));
+        Ok(())
+    }
 
     #[gtest]
     fn test_hover_generic_index_signature_and_named_field() -> Result<()> {
