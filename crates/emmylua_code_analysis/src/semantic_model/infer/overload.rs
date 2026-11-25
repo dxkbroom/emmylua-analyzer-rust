@@ -505,6 +505,18 @@ fn match_call_candidate_impl(
         // branch above never sees the alias. Expand aliases nested in the union
         // so the argument matches the alias target rather than the bare `Ref`.
         expand_union_alias_members(model, &mut param_ty);
+        // Treat a numeric-keyed generic table parameter like an array when the
+        // call supplies a table literal, so its element generic can be inferred
+        // from literal values (`table<integer, T>` + `{1, 2, 3}` -> `T = integer`).
+        if args
+            .get(index)
+            .is_some_and(|arg| matches!(arg.ty, LuaType::TableConst(_)))
+            && let LuaType::Generic(generic) = &param_ty
+            && generic.get_base_type_id() == LuaTypeDeclId::global("table")
+            && let [LuaType::Integer, value_ty] = generic.get_params().as_slice()
+        {
+            param_ty = LuaType::Array(Rc::new(LuaArrayType::from_base_type(value_ty.clone())));
+        }
         if name == "..." || matches!(param_ty, LuaType::Variadic(_)) {
             let base = variadic_base_type(&param_ty).unwrap_or(LuaType::Unknown);
             // `T...` variadic generic (param itself is Variadic): bind the remaining args

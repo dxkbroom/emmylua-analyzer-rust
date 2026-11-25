@@ -11,8 +11,8 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use emmylua_parser::{
-    BinaryOperator, LuaAstNode, LuaCallExpr, LuaClosureExpr, LuaDocFuncType, LuaDocType, LuaExpr,
-    LuaIndexKey, LuaReturnStat, LuaSyntaxId,
+    BinaryOperator, LuaAstNode, LuaAstToken, LuaCallExpr, LuaClosureExpr, LuaDocFuncType,
+    LuaDocType, LuaExpr, LuaIndexKey, LuaReturnStat, LuaSyntaxId,
 };
 
 use hashbrown::HashMap;
@@ -1872,6 +1872,92 @@ impl<'a> InferVm<'a> {
             let param_ty = unify::substitute(&param_ty, &bindings);
             if !matches!(param_ty, LuaType::Unknown | LuaType::Any) {
                 self.bind_table_literal_closure_params(&arg.ty, &param_ty, &bindings);
+            }
+        }
+        // Emitter-style callbacks carry their result type in a nested function
+        // parameter (`fun(emit: fun(value: U), input: T)`) rather than in the
+        // callback's return. Infer U from calls such as `emit(input)` and
+        // `emit(tostring(input))`, after the callback's parameters are bound.
+        for (index, arg) in args.iter().enumerate() {
+            let Some(closure_syntax) = arg.closure_syntax else {
+                continue;
+            };
+            let Some(callback_param_ty) = callee_fun
+                .get_params()
+                .get(index + callback_param_offset)
+                .and_then(|p| p.1.clone())
+            else {
+                continue;
+            };
+            let callback_param_ty =
+                bind_signature_generics(&callback_param_ty, callee_fun.get_generic_params());
+            let LuaType::DocFunction(callback_fun) = callback_param_ty else {
+                continue;
+            };
+            let Some(tree) = self.model.syntax_tree() else {
+                continue;
+            };
+            let root = tree.get_red_root();
+            let Some(node) = closure_syntax.to_node_from_root(&root) else {
+                continue;
+            };
+            let Some(closure) = LuaClosureExpr::cast(node) else {
+                continue;
+            };
+            let Some(params) = closure.get_params_list() else {
+                continue;
+            };
+            for (param_index, (_, param_ty)) in callback_fun.get_params().iter().enumerate() {
+                let Some(LuaType::DocFunction(emitter_fun)) =
+                    param_ty.as_ref().map(|ty| unify::substitute(ty, &bindings))
+                else {
+                    continue;
+                };
+                let Some(emitter_decl) = params
+                    .get_params()
+                    .nth(param_index)
+                    .and_then(|param| param.get_name_token())
+                    .and_then(|token| {
+                        self.model
+                            .file_facts()?
+                            .decl_at_offset(token.get_position())
+                            .map(|decl| decl.id.clone())
+                    })
+                else {
+                    continue;
+                };
+                for call in closure.descendants::<LuaCallExpr>().filter(|call| {
+                    call.ancestors::<LuaClosureExpr>()
+                        .next()
+                        .is_some_and(|owner| owner.get_syntax_id() == closure_syntax)
+                }) {
+                    let Some(LuaExpr::NameExpr(prefix)) = call.get_prefix_expr() else {
+                        continue;
+                    };
+                    if self.model.resolve_name(prefix.get_position()).as_ref()
+                        != Some(&emitter_decl)
+                    {
+                        continue;
+                    }
+                    let Some(call_args) = call.get_args_list() else {
+                        continue;
+                    };
+                    for (expr, (_, expected_ty)) in
+                        call_args.get_args().zip(emitter_fun.get_params().iter())
+                    {
+                        let Some(expected_ty) = expected_ty else {
+                            continue;
+                        };
+                        let actual_ty = self.type_of_expr_inherit(expr.get_syntax_id());
+                        let expected_ty = unify::substitute(expected_ty, &bindings);
+                        let _ = unify_call_bindings(
+                            self.model,
+                            &expected_ty,
+                            &actual_ty,
+                            &mut bindings,
+                        );
+                    }
+                }
             }
         }
         // Closure-arg return back-inference: after the param environment is filled, use the

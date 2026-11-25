@@ -857,6 +857,82 @@ fn test_vararg_generic_callback_keeps_result_tail() {
 }
 
 #[test]
+fn test_transform_emitter_infers_output_from_emitted_input() {
+    let env = model_of(
+        r#"
+        ---@class Flow<T>
+        local Flow = {}
+        local flow = {}
+        ---@generic T
+        ---@param values table<integer, T>
+        ---@return Flow<T>
+        function flow.from(values) end
+        ---@generic U
+        ---@param fn fun(emit: fun(value: U), value: T)
+        ---@return Flow<U>
+        function Flow:transform_latest(fn) end
+        ---@overload fun(self: Flow<T>): table<integer, T>
+        ---@generic M: table<integer, T>
+        ---@param target M
+        ---@return M
+        function Flow:to_list(target) end
+        local source = flow.from({1, 2, 3})
+        local mapped = source:transform_latest(function(emit, value)
+            emit(value)
+            emit(value + 1)
+        end)
+        local result = mapped:to_list()
+        local strings = source:transform_latest(function(emit, value)
+            emit("mapped")
+        end):to_list()
+        local shadowed = source:transform_latest(function(emit, value)
+            do
+                local emit = function(item) return item end
+                emit("shadowed")
+            end
+            emit(value)
+        end):to_list()
+    "#,
+    );
+    let model = env.model();
+    let source = model.type_of_decl(&decl_of(&model, "source"));
+    assert!(
+        matches!(source, Some(LuaType::Generic(ref flow))
+            if flow.get_base_type_id() == LuaTypeDeclId::global("Flow")
+                && flow.get_params() == &vec![LuaType::Integer]),
+        "{source:?}"
+    );
+    let mapped = model.type_of_decl(&decl_of(&model, "mapped"));
+    assert!(
+        matches!(mapped, Some(LuaType::Generic(ref flow))
+            if flow.get_base_type_id() == LuaTypeDeclId::global("Flow")
+                && flow.get_params() == &vec![LuaType::Integer]),
+        "{mapped:?}"
+    );
+    let result = model.type_of_decl(&decl_of(&model, "result"));
+    assert!(
+        matches!(result, Some(LuaType::Generic(ref table))
+            if table.get_base_type_id() == LuaTypeDeclId::global("table")
+                && table.get_params() == &vec![LuaType::Integer, LuaType::Integer]),
+        "{result:?}"
+    );
+    let strings = model.type_of_decl(&decl_of(&model, "strings"));
+    assert!(
+        matches!(strings, Some(LuaType::Generic(ref table))
+            if table.get_base_type_id() == LuaTypeDeclId::global("table")
+                && table.get_params() == &vec![LuaType::Integer, LuaType::String]),
+        "{strings:?}"
+    );
+    let shadowed = model.type_of_decl(&decl_of(&model, "shadowed"));
+    assert!(
+        matches!(shadowed, Some(LuaType::Generic(ref table))
+            if table.get_base_type_id() == LuaTypeDeclId::global("table")
+                && table.get_params() == &vec![LuaType::Integer, LuaType::Integer]),
+        "{shadowed:?}"
+    );
+}
+
+#[test]
 fn test_vararg_index_keys_take_the_first_value() {
     let env = model_of(
         r#"
