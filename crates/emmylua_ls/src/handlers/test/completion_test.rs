@@ -276,6 +276,7 @@ items.<??>
     #[gtest]
     fn test_2() -> Result<()> {
         let mut ws = ProviderVirtualWorkspace::new();
+        // Active completion includes built-in type names alongside callback and overload candidates.
         check!(ws.check_completion(
             r#"
                 ---@overload fun(event: "AAA", callback: fun(trg: string, data: number)): number
@@ -289,9 +290,24 @@ items.<??>
             "#,
             vec![
                 VirtualCompletionItem {
+                    label: "any".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
                     label: "data".to_string(),
                     kind: CompletionItemKind::VARIABLE,
                     ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "table".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "test".to_string(),
+                    kind: CompletionItemKind::FUNCTION,
+                    label_detail: Some("(event, callback)".to_string()),
                 },
                 VirtualCompletionItem {
                     label: "trg".to_string(),
@@ -299,9 +315,14 @@ items.<??>
                     ..Default::default()
                 },
                 VirtualCompletionItem {
-                    label: "test".to_string(),
-                    kind: CompletionItemKind::FUNCTION,
-                    label_detail: Some("(event, callback)".to_string()),
+                    label: "unknown".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "void".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
                 },
             ],
         ));
@@ -317,6 +338,11 @@ items.<??>
             "#,
             vec![
                 VirtualCompletionItem {
+                    label: "any".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
                     label: "\"AAA\"".to_string(),
                     kind: CompletionItemKind::ENUM_MEMBER,
                     ..Default::default()
@@ -327,9 +353,24 @@ items.<??>
                     ..Default::default()
                 },
                 VirtualCompletionItem {
+                    label: "table".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
                     label: "test".to_string(),
                     kind: CompletionItemKind::FUNCTION,
                     label_detail: Some("(event, callback)".to_string()),
+                },
+                VirtualCompletionItem {
+                    label: "unknown".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "void".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
                 },
             ],
         ));
@@ -387,7 +428,7 @@ items.<??>
             CompletionTriggerKind::TRIGGER_CHARACTER,
         ));
 
-        // Actively triggered completion
+        // Active completion includes built-in type names alongside overload candidates.
         check!(ws.check_completion(
             r#"
                 ---@class Test1
@@ -397,6 +438,26 @@ items.<??>
                 Test.event(<??>)
             "#,
             vec![
+                VirtualCompletionItem {
+                    label: "any".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "table".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "unknown".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
+                VirtualCompletionItem {
+                    label: "void".to_string(),
+                    kind: CompletionItemKind::CLASS,
+                    ..Default::default()
+                },
                 VirtualCompletionItem {
                     label: "\"A\"".to_string(),
                     kind: CompletionItemKind::ENUM_MEMBER,
