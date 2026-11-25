@@ -574,7 +574,7 @@ mod tests {
                 end)
             "#,
             VirtualHoverResult {
-                value: "```lua\n(method) Observable:select(selector: fun(value: integer, index: integer?) -> integer)\n```".to_string(),
+                value: "```lua\n(method) Observable:select(selector: fun(value: integer, index: integer?) -> R)\n```".to_string(),
             },
         ));
         Ok(())
@@ -765,7 +765,7 @@ mod tests {
                 generic_te<??>st(true, false)
             "#,
             VirtualHoverResult {
-                value: "```lua\nfunction generic_test(value: table, fallback: boolean) -> boolean, unknown (+2 overloads)\n```\n\n---\n\n---\n\n```lua\nfunction generic_test(value: string, fallback: boolean) -> boolean, unknown\n```\n\n```lua\nfunction generic_test(value: number, fallback: boolean) -> boolean, unknown\n```".to_string(),
+                value: "```lua\nfunction generic_test(value: table, fallback: boolean) -> boolean, U (+2 overloads)\n```\n\n---\n\n---\n\n```lua\nfunction generic_test(value: string, fallback) -> unknown, unknown\n```\n\n```lua\nfunction generic_test(value: number, fallback) -> unknown, unknown\n```".to_string(),
             },
         ));
         Ok(())
@@ -926,7 +926,7 @@ mod tests {
                 })
             "#,
                 VirtualHoverResult {
-                    value: "```lua\n(field) ObserverParams.next(value: string) -> string\n```\n\n---\n\n测试"
+                    value: "```lua\n(field) ObserverParams.next(value: T) -> T\n```\n\n---\n\n测试"
                         .to_string(),
                 },
             )
@@ -957,7 +957,7 @@ mod tests {
                 })
             "#,
                 VirtualHoverResult {
-                    value: "```lua\n(field) ObserverParams.next(value: unknown) -> unknown\n```\n\n---\n\n测试"
+                    value: "```lua\n(field) ObserverParams.next(value: T) -> T\n```\n\n---\n\n测试"
                         .to_string(),
                 },
             )
