@@ -22,7 +22,7 @@ use crate::{
     LuaType, LuaUnionType,
 };
 
-use super::param_count::first_param_is_self;
+use super::param_count::{call_parameter_offsets, first_param_is_self};
 use super::{CheckContext, Checker};
 use crate::semantic_model::render::humanize_type;
 
@@ -367,15 +367,16 @@ pub(crate) fn resolved_call_signatures(
     for fun in candidates {
         let fun = apply_owner_generics(fun.clone(), &owner_constraints);
         let params = fun.get_params();
-        let self_param = first_param_is_self(&fun);
-        let param_start = usize::from(colon_call && self_param);
+        let (param_start, arg_start) = call_parameter_offsets(&fun, colon_call);
         let mut bindings = unify::TplBindings::new();
-        if colon_call && !self_param {
-            if let Some((_, Some(param_ty))) = params.first() {
-                let _ = unify::unify_bindings(param_ty, receiver_ty, &mut bindings);
-            }
+        if colon_call && let Some((_, Some(param_ty))) = params.first().filter(|_| param_start != 0)
+        {
+            let _ = unify::unify_bindings(param_ty, receiver_ty, &mut bindings);
         }
-        for ((_, param_ty), arg_ty) in params[param_start..].iter().zip(arg_types.iter()) {
+        for ((_, param_ty), arg_ty) in params[param_start.min(params.len())..]
+            .iter()
+            .zip(arg_types.iter().skip(arg_start))
+        {
             let Some(param_ty) = param_ty else {
                 continue;
             };

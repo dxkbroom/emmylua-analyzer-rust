@@ -686,6 +686,18 @@ pub(crate) fn first_param_is_self(func: &LuaFunctionType) -> bool {
     })
 }
 
+/// Offsets into declared parameters and explicit arguments, respectively.
+pub(crate) fn call_parameter_offsets(
+    function: &LuaFunctionType,
+    colon_call: bool,
+) -> (usize, usize) {
+    let implicit_self = function.is_colon_define() && !first_param_is_self(function);
+    (
+        usize::from(colon_call && !implicit_self),
+        usize::from(!colon_call && implicit_self),
+    )
+}
+
 struct ParamCountRange {
     min: usize,
     max: Option<usize>,

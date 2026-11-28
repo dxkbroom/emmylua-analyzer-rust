@@ -22,6 +22,7 @@ use crate::DiagnosticCode;
 use crate::semantic_model::SemanticModel;
 use crate::{AsyncState, DeclKind, LuaFunctionType, LuaType, SemanticId};
 
+use super::param_count::call_parameter_offsets;
 use super::param_type_check::{callable_candidates, callable_candidates_uncached};
 use super::{CheckContext, Checker};
 
@@ -78,6 +79,12 @@ fn callee_candidates(
         return Vec::new();
     };
     let mut candidates = callable_candidates(semantic_model, &prefix_expr);
+    // Member resolution can miss a chained receiver even when value inference
+    // knows its callable type (for example, factory():method(callback)).
+    if candidates.is_empty() && matches!(prefix_expr, LuaExpr::IndexExpr(_)) {
+        let ty = semantic_model.type_of_expr(prefix_expr.get_syntax_id());
+        candidates = semantic_model.callable_functions_cached(&ty);
+    }
     // A local alias of a required module member can retain the callable shape
     // while losing async state on callback parameters during value inference.
     // Recover the declaration-site contract from the alias initializer, just
@@ -243,25 +250,15 @@ fn check_call_as_arg(
     // Report the same argument only once (overload candidates may reach the same conclusion).
     let mut reported = HashSet::new();
     for fun in &candidates {
-        let colon_define = fun.is_colon_define();
-        for (param_idx, (_, param_type)) in fun.get_params().iter().enumerate() {
+        let (param_start, arg_start) = call_parameter_offsets(fun, colon_call);
+        for (param_idx, (_, param_type)) in fun.get_params().iter().skip(param_start).enumerate() {
             let Some(param_type) = param_type else {
                 continue;
             };
             if param_type_async_state(param_type) != Some(AsyncState::Sync) {
                 continue;
             }
-            let arg_idx = match (colon_define, colon_call) {
-                (true, false) => param_idx + 1,
-                (false, true) => {
-                    if param_idx == 0 {
-                        continue;
-                    }
-                    param_idx - 1
-                }
-                _ => param_idx,
-            };
-            let Some(arg) = args.get(arg_idx) else {
+            let Some(arg) = args.get(arg_start + param_idx) else {
                 continue;
             };
             if !reported.insert(arg.get_range()) {
@@ -331,19 +328,10 @@ fn callback_param_is_async(semantic_model: &SemanticModel<'_>, closure: &LuaClos
     let candidates = callee_candidates(semantic_model, &call_expr);
     let colon_call = call_expr.is_colon_call();
     candidates.iter().any(|fun| {
-        let colon_define = fun.is_colon_define();
-        let idx = match (colon_define, colon_call) {
-            (true, false) => param_idx + 1,
-            (false, true) => {
-                if param_idx == 0 {
-                    return false;
-                }
-                param_idx - 1
-            }
-            _ => param_idx,
-        };
-        fun.get_params()
-            .get(idx)
+        let (param_start, arg_start) = call_parameter_offsets(fun, colon_call);
+        param_idx
+            .checked_sub(arg_start)
+            .and_then(|index| fun.get_params().get(param_start + index))
             .and_then(|(_, ty)| ty.as_ref())
             .and_then(param_type_async_state)
             == Some(AsyncState::Async)

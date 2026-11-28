@@ -842,4 +842,25 @@ mod test {
         "#
         ));
     }
+    #[test]
+    fn test_colon_method_does_not_bind_receiver_to_constrained_parameter() {
+        let mut ws = VirtualWorkspace::new();
+        assert!(ws.has_no_diagnostic(
+            DiagnosticCode::GenericConstraintMismatch,
+            r#"
+            ---@class Stream<T>
+            local Stream = {}
+
+            ---@overload fun(self: Stream<T>): table<integer, T>
+            ---@generic M: table<integer, T>
+            ---@param target M
+            ---@return M
+            function Stream:collect(target) end
+
+            ---@type Stream<integer>
+            local stream
+            stream:collect()
+            "#,
+        ));
+    }
 }

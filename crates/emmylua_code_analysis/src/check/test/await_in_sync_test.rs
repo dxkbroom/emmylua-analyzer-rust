@@ -261,4 +261,22 @@ mod test {
         "#
         ));
     }
+    #[test]
+    fn test_async_callback_with_explicit_receiver_in_overload() {
+        let mut ws = VirtualWorkspace::new();
+        assert!(ws.has_no_diagnostic(
+            DiagnosticCode::AwaitInSync,
+            r#"
+            ---@class Stream
+            ---@field collect fun(self: Stream, fn: async fun())
+            ---@type Stream
+            local stream
+            ---@async
+            local function wait() end
+
+            stream:collect(function () wait() end)
+            stream.collect(stream, function () wait() end)
+            "#,
+        ));
+    }
 }
